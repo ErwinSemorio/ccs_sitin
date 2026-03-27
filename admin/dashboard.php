@@ -1,13 +1,26 @@
-
 <?php
 session_start();
 if (!isset($_SESSION['user_id'])) {
     header("Location: /ccs_sitin/login.php");
     exit();
-
 }
-?>
+include __DIR__ . "/../config/database.php";
 
+// ── Fetch students from database ──
+$students_result = mysqli_query($conn, "SELECT * FROM students ORDER BY last_name ASC");
+$students_data = [];
+while ($row = mysqli_fetch_assoc($students_result)) {
+    $students_data[] = $row;
+}
+$total_students = count($students_data);
+
+// ── Fetch stats ──
+$total_sitin_result = mysqli_query($conn, "SELECT COUNT(*) as total FROM sitin_records");
+$total_sitin = mysqli_fetch_assoc($total_sitin_result)['total'] ?? 0;
+
+$active_sitin_result = mysqli_query($conn, "SELECT COUNT(*) as total FROM sitin_records WHERE status='Active'");
+$active_sitin = mysqli_fetch_assoc($active_sitin_result)['total'] ?? 0;
+?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -81,7 +94,6 @@ if (!isset($_SESSION['user_id'])) {
       color: #fff;
       background: rgba(255,255,255,.12);
     }
-    .topnav-links a.active { color: #fff; }
     .logout-btn-nav {
       padding: 7px 16px !important;
       background: var(--gold) !important;
@@ -92,10 +104,8 @@ if (!isset($_SESSION['user_id'])) {
     }
     .logout-btn-nav:hover { opacity: .88 !important; }
 
-    /* ── PAGE WRAPPER ── */
     .page { padding: 28px 32px; max-width: 1300px; margin: 0 auto; animation: fadeUp .4s ease both; }
 
-    /* ── SECTION HEADING ── */
     .section-heading {
       font-size: 22px; font-weight: 800;
       color: var(--text); margin-bottom: 22px;
@@ -108,7 +118,6 @@ if (!isset($_SESSION['user_id'])) {
       border-radius: 3px;
     }
 
-    /* ── CARDS ── */
     .card {
       background: var(--surface);
       border: 1.5px solid var(--border);
@@ -130,12 +139,10 @@ if (!isset($_SESSION['user_id'])) {
     }
     .card-body { padding: 20px; }
 
-    /* ── HOME PAGE ── */
     .home-grid {
       display: grid; grid-template-columns: 1fr 1fr; gap: 20px;
     }
 
-    /* Stats block */
     .stat-row { display: flex; flex-direction: column; gap: 10px; margin-bottom: 18px; }
     .stat-item {
       display: flex; align-items: center; justify-content: space-between;
@@ -149,7 +156,6 @@ if (!isset($_SESSION['user_id'])) {
 
     .chart-wrap { height: 220px; position: relative; }
 
-    /* Announcement */
     .announce-form textarea {
       width: 100%; min-height: 80px;
       border: 1.5px solid var(--border);
@@ -187,7 +193,6 @@ if (!isset($_SESSION['user_id'])) {
     .posted-meta { font-size: 11px; font-weight: 700; color: var(--blue); font-family: 'JetBrains Mono', monospace; margin-bottom: 5px; }
     .posted-text { font-size: 13px; color: var(--muted); line-height: 1.55; }
 
-    /* ── TABLE ── */
     .table-toolbar {
       display: flex; align-items: center; justify-content: space-between;
       padding: 14px 20px;
@@ -235,7 +240,6 @@ if (!isset($_SESSION['user_id'])) {
     tbody tr:last-child td { border-bottom: none; }
     .td-mono { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--muted); }
 
-    /* Badges */
     .badge {
       display: inline-flex; align-items: center; gap: 5px;
       padding: 3px 10px; border-radius: 20px;
@@ -246,7 +250,6 @@ if (!isset($_SESSION['user_id'])) {
     .badge-amber  { background: var(--amber-lt); color: var(--amber); }
     .badge-red    { background: var(--red-lt);   color: var(--red); }
 
-    /* Action buttons in table */
     .action-btns { display: flex; gap: 6px; }
     .btn-sm {
       padding: 5px 13px; font-size: 12px; border-radius: 7px;
@@ -260,7 +263,6 @@ if (!isset($_SESSION['user_id'])) {
     .btn-sm-teal  { background: var(--teal);  color: #fff; }
     .btn-sm-teal:hover  { background: #047481; }
 
-    /* Table footer */
     .table-footer {
       display: flex; align-items: center; justify-content: space-between;
       padding: 12px 20px;
@@ -278,7 +280,6 @@ if (!isset($_SESSION['user_id'])) {
     }
     .page-btn:hover, .page-btn.active { background: var(--blue); color: #fff; border-color: var(--blue); }
 
-    /* ── MODAL ── */
     .modal-overlay {
       display: none; position: fixed; inset: 0; z-index: 200;
       background: rgba(15,32,68,.45);
@@ -331,14 +332,11 @@ if (!isset($_SESSION['user_id'])) {
       border-top: 1.5px solid var(--border);
     }
 
-    /* ── HIDDEN/SHOWN PAGES ── */
     .page-section { display: none; }
     .page-section.active { display: block; }
 
-    /* ── NO DATA ── */
     .no-data { text-align: center; padding: 36px; color: var(--muted); font-size: 13px; font-weight: 600; }
 
-    /* ── ANIMATIONS ── */
     @keyframes fadeUp  { from { opacity:0; transform:translateY(16px); } to { opacity:1; transform:none; } }
     @keyframes fadeIn  { from { opacity:0; } to { opacity:1; } }
     @keyframes slideUp { from { opacity:0; transform:translateY(24px); } to { opacity:1; transform:none; } }
@@ -351,7 +349,6 @@ if (!isset($_SESSION['user_id'])) {
   </style>
 </head>
 <body>
-
 
 <!-- ══ TOPNAV ══ -->
 <nav class="topnav">
@@ -368,33 +365,30 @@ if (!isset($_SESSION['user_id'])) {
     <li><a onclick="showPage('reports')"   id="nav-reports">Sit-in Reports</a></li>
     <li><a onclick="showPage('feedback')"  id="nav-feedback">Feedback Reports</a></li>
     <li><a onclick="showPage('reserve')"   id="nav-reserve">Reservation</a></li>
-    <li><a href="/ccs_sitin/logout.php" class="logout-link">Log out</a></li>
+    <li><a href="/ccs_sitin/logout.php" class="logout-btn-nav">Log out</a></li>
   </ul>
 </nav>
 
-<!-- ══════════════════════════════════════════
-     HOME PAGE
-══════════════════════════════════════════ -->
+<!-- ══ HOME ══ -->
 <div class="page page-section active" id="page-home">
   <div class="section-heading">Dashboard Overview</div>
   <div class="home-grid">
 
-    <!-- Statistics -->
     <div class="card">
       <div class="card-head"><span class="chip">📊</span> Statistics</div>
       <div class="card-body">
         <div class="stat-row">
           <div class="stat-item">
             <span class="label">Students Registered</span>
-            <span class="val">38</span>
+            <span class="val"><?php echo $total_students; ?></span>
           </div>
           <div class="stat-item">
             <span class="label">Currently Sit-in</span>
-            <span class="val">0</span>
+            <span class="val"><?php echo $active_sitin; ?></span>
           </div>
           <div class="stat-item">
             <span class="label">Total Sit-in</span>
-            <span class="val">15</span>
+            <span class="val"><?php echo $total_sitin; ?></span>
           </div>
         </div>
         <div class="chart-wrap">
@@ -403,7 +397,6 @@ if (!isset($_SESSION['user_id'])) {
       </div>
     </div>
 
-    <!-- Announcement -->
     <div class="card">
       <div class="card-head"><span class="chip">📢</span> Announcement</div>
       <div class="card-body">
@@ -420,7 +413,7 @@ if (!isset($_SESSION['user_id'])) {
           </div>
           <div class="posted-item">
             <div class="posted-meta">CCS Admin | 2024-May-08</div>
-            <div class="posted-text">Important Announcement — We are excited to announce the launch of our new website! Explore our latest products and services now!</div>
+            <div class="posted-text">Important Announcement — We are excited to announce the launch of our new website!</div>
           </div>
         </div>
       </div>
@@ -428,9 +421,7 @@ if (!isset($_SESSION['user_id'])) {
   </div>
 </div>
 
-<!-- ══════════════════════════════════════════
-     SEARCH PAGE
-══════════════════════════════════════════ -->
+<!-- ══ SEARCH ══ -->
 <div class="page page-section" id="page-search">
   <div class="section-heading">Search Student</div>
   <div class="card" style="max-width:520px">
@@ -445,16 +436,13 @@ if (!isset($_SESSION['user_id'])) {
   </div>
 </div>
 
-<!-- ══════════════════════════════════════════
-     STUDENTS PAGE
-══════════════════════════════════════════ -->
+<!-- ══ STUDENTS ══ -->
 <div class="page page-section" id="page-students">
   <div class="section-heading">Students Information</div>
   <div class="card">
     <div class="table-toolbar">
       <div class="table-toolbar-left">
-        <button class="btn btn-primary" onclick="openModal('addStudentModal')">＋ Add Students</button>
-        <button class="btn btn-danger"  onclick="confirmResetSessions()">↺ Reset All Sessions</button>
+        <button class="btn btn-danger" onclick="confirmResetSessions()">↺ Reset All Sessions</button>
         <label style="font-size:12px;font-weight:600;color:var(--muted);display:flex;align-items:center;gap:6px">
           <select class="entries-select"><option>10</option><option>25</option><option>50</option></select>
           entries per page
@@ -462,26 +450,43 @@ if (!isset($_SESSION['user_id'])) {
       </div>
       <div style="display:flex;align-items:center;gap:8px">
         <span style="font-size:12px;font-weight:600;color:var(--muted)">Search:</span>
-        <input class="search-input" id="studentsSearch" placeholder="Search..." oninput="renderStudentsTable()"/>
+        <input class="search-input" id="studentsSearch" placeholder="Search..." oninput="filterStudentsTable()"/>
       </div>
     </div>
     <div style="overflow-x:auto">
       <table id="studentsTable">
         <thead>
           <tr>
-            <th>ID Number ↕</th>
-            <th>Name ↕</th>
-            <th>Year Level ↕</th>
-            <th>Course ↕</th>
-            <th>Remaining Session ↕</th>
-            <th>Actions</th>
+            <th>#</th>
+            <th>ID Number</th>
+            <th>Name</th>
+            <th>Course</th>
+            <th>Email</th>
+            <th>Address</th>
+            <th>Date Registered</th>
           </tr>
         </thead>
-        <tbody id="studentsTbody"></tbody>
+        <tbody id="studentsTbody">
+          <?php if (count($students_data) > 0): ?>
+            <?php $count = 1; foreach ($students_data as $s): ?>
+            <tr>
+              <td><?php echo $count++; ?></td>
+              <td class="td-mono"><?php echo htmlspecialchars($s['id_number']); ?></td>
+              <td><strong><?php echo htmlspecialchars($s['last_name'] . ', ' . $s['first_name'] . ' ' . $s['middle_name']); ?></strong></td>
+              <td><span class="badge badge-blue"><?php echo htmlspecialchars($s['course']); ?></span></td>
+              <td><?php echo htmlspecialchars($s['email']); ?></td>
+              <td><?php echo htmlspecialchars($s['address']); ?></td>
+              <td><?php echo date('M d, Y', strtotime($s['created_at'])); ?></td>
+            </tr>
+            <?php endforeach; ?>
+          <?php else: ?>
+            <tr><td colspan="7" class="no-data">No students registered yet.</td></tr>
+          <?php endif; ?>
+        </tbody>
       </table>
     </div>
     <div class="table-footer">
-      <span id="studentsInfo">Showing 1 to 6 of 6 entries</span>
+      <span id="studentsInfo">Showing <?php echo count($students_data); ?> students</span>
       <div class="pagination">
         <button class="page-btn">«</button>
         <button class="page-btn active">1</button>
@@ -491,9 +496,7 @@ if (!isset($_SESSION['user_id'])) {
   </div>
 </div>
 
-<!-- ══════════════════════════════════════════
-     SIT-IN PAGE
-══════════════════════════════════════════ -->
+<!-- ══ SIT-IN ══ -->
 <div class="page page-section" id="page-sitin">
   <div class="section-heading">Current Sit-in</div>
   <div class="card">
@@ -514,23 +517,18 @@ if (!isset($_SESSION['user_id'])) {
       <table>
         <thead>
           <tr>
-            <th>Sit ID Number ↕</th>
-            <th>ID Number ↕</th>
-            <th>Name ↕</th>
-            <th>Purpose ↕</th>
-            <th>Sit Lab ↕</th>
-            <th>Session ↕</th>
-            <th>Status ↕</th>
-            <th>Actions</th>
+            <th>Sit ID</th><th>ID Number</th><th>Name</th>
+            <th>Purpose</th><th>Lab</th><th>Session</th>
+            <th>Status</th><th>Actions</th>
           </tr>
         </thead>
         <tbody id="sitinTbody">
-          <tr><td colspan="8" class="no-data">No data available</td></tr>
+          <tr><td colspan="8" class="no-data">No active sit-ins</td></tr>
         </tbody>
       </table>
     </div>
     <div class="table-footer">
-      <span>Showing 1 to 1 of 1 entry</span>
+      <span id="sitinInfo">Showing 0 entries</span>
       <div class="pagination">
         <button class="page-btn">«</button>
         <button class="page-btn active">1</button>
@@ -540,9 +538,7 @@ if (!isset($_SESSION['user_id'])) {
   </div>
 </div>
 
-<!-- ══════════════════════════════════════════
-     VIEW SIT-IN RECORDS
-══════════════════════════════════════════ -->
+<!-- ══ RECORDS ══ -->
 <div class="page page-section" id="page-records">
   <div class="section-heading">Sit-in Records</div>
   <div class="card">
@@ -562,9 +558,9 @@ if (!isset($_SESSION['user_id'])) {
       <table>
         <thead>
           <tr>
-            <th>Sit ID ↕</th><th>ID Number ↕</th><th>Name ↕</th>
-            <th>Purpose ↕</th><th>Lab ↕</th><th>Session ↕</th>
-            <th>Date ↕</th><th>Time In ↕</th><th>Time Out ↕</th><th>Status ↕</th>
+            <th>Sit ID</th><th>ID Number</th><th>Name</th>
+            <th>Purpose</th><th>Lab</th><th>Session</th>
+            <th>Date</th><th>Time In</th><th>Time Out</th><th>Status</th>
           </tr>
         </thead>
         <tbody id="recordsTbody">
@@ -583,9 +579,7 @@ if (!isset($_SESSION['user_id'])) {
   </div>
 </div>
 
-<!-- ══════════════════════════════════════════
-     SIT-IN REPORTS
-══════════════════════════════════════════ -->
+<!-- ══ REPORTS ══ -->
 <div class="page page-section" id="page-reports">
   <div class="section-heading">Sit-in Reports</div>
   <div class="card">
@@ -604,9 +598,7 @@ if (!isset($_SESSION['user_id'])) {
   </div>
 </div>
 
-<!-- ══════════════════════════════════════════
-     FEEDBACK REPORTS
-══════════════════════════════════════════ -->
+<!-- ══ FEEDBACK ══ -->
 <div class="page page-section" id="page-feedback">
   <div class="section-heading">Feedback Reports</div>
   <div class="card">
@@ -625,7 +617,7 @@ if (!isset($_SESSION['user_id'])) {
     <div style="overflow-x:auto">
       <table>
         <thead>
-          <tr><th>ID Number ↕</th><th>Name ↕</th><th>Lab ↕</th><th>Date ↕</th><th>Feedback ↕</th><th>Rating ↕</th></tr>
+          <tr><th>ID Number</th><th>Name</th><th>Lab</th><th>Date</th><th>Feedback</th><th>Rating</th></tr>
         </thead>
         <tbody>
           <tr><td colspan="6" class="no-data">No feedback available</td></tr>
@@ -635,9 +627,7 @@ if (!isset($_SESSION['user_id'])) {
   </div>
 </div>
 
-<!-- ══════════════════════════════════════════
-     RESERVATION
-══════════════════════════════════════════ -->
+<!-- ══ RESERVATION ══ -->
 <div class="page page-section" id="page-reserve">
   <div class="section-heading">Reservations</div>
   <div class="card">
@@ -656,7 +646,7 @@ if (!isset($_SESSION['user_id'])) {
     <div style="overflow-x:auto">
       <table>
         <thead>
-          <tr><th>Reservation ID ↕</th><th>ID Number ↕</th><th>Name ↕</th><th>Lab ↕</th><th>Date ↕</th><th>Time ↕</th><th>Status ↕</th><th>Actions</th></tr>
+          <tr><th>Reservation ID</th><th>ID Number</th><th>Name</th><th>Lab</th><th>Date</th><th>Time</th><th>Status</th><th>Actions</th></tr>
         </thead>
         <tbody>
           <tr><td colspan="8" class="no-data">No reservations available</td></tr>
@@ -665,7 +655,6 @@ if (!isset($_SESSION['user_id'])) {
     </div>
   </div>
 </div>
-
 
 <!-- ══ MODAL: SIT-IN FORM ══ -->
 <div class="modal-overlay" id="sitInModal">
@@ -677,7 +666,7 @@ if (!isset($_SESSION['user_id'])) {
     <div class="modal-body">
       <div class="form-group">
         <label>ID Number</label>
-        <input id="si-id" placeholder="e.g. 3677937" oninput="autoFillName()"/>
+        <input id="si-id" placeholder="e.g. 2021-00124" oninput="autoFillName()"/>
       </div>
       <div class="form-group">
         <label>Student Name</label>
@@ -716,35 +705,6 @@ if (!isset($_SESSION['user_id'])) {
   </div>
 </div>
 
-<!-- ══ MODAL: ADD STUDENT ══ -->
-<div class="modal-overlay" id="addStudentModal">
-  <div class="modal">
-    <div class="modal-head">
-      <h3>👤 Add Student</h3>
-      <button class="modal-close" onclick="closeModal('addStudentModal')">✕</button>
-    </div>
-    <div class="modal-body">
-      <div class="form-group"><label>ID Number</label><input id="as-id" placeholder="e.g. 2021-00124"/></div>
-      <div class="form-group"><label>First Name</label><input id="as-fname" placeholder="First name"/></div>
-      <div class="form-group"><label>Last Name</label><input id="as-lname" placeholder="Last name"/></div>
-      <div class="form-group">
-        <label>Course</label>
-        <select id="as-course">
-          <option>BSIT</option><option>BSCS</option><option>ACT</option>
-        </select>
-      </div>
-      <div class="form-group">
-        <label>Year Level</label>
-        <select id="as-year"><option>1</option><option>2</option><option>3</option><option>4</option></select>
-      </div>
-    </div>
-    <div class="modal-footer">
-      <button class="btn btn-secondary" onclick="closeModal('addStudentModal')">Cancel</button>
-      <button class="btn btn-primary" onclick="addStudent()">Add Student</button>
-    </div>
-  </div>
-</div>
-
 <!-- ══ MODAL: EDIT STUDENT ══ -->
 <div class="modal-overlay" id="editStudentModal">
   <div class="modal">
@@ -754,10 +714,15 @@ if (!isset($_SESSION['user_id'])) {
     </div>
     <div class="modal-body">
       <div class="form-group"><label>ID Number</label><input id="es-id" readonly style="background:#f1f5fb"/></div>
-      <div class="form-group"><label>Name</label><input id="es-name"/></div>
-      <div class="form-group"><label>Course</label><select id="es-course"><option>BSIT</option><option>BSCS</option><option>ACT</option></select></div>
-      <div class="form-group"><label>Year Level</label><select id="es-year"><option>1</option><option>2</option><option>3</option><option>4</option></select></div>
-      <div class="form-group"><label>Remaining Sessions</label><input id="es-remaining" type="number"/></div>
+      <div class="form-group"><label>First Name</label><input id="es-fname"/></div>
+      <div class="form-group"><label>Last Name</label><input id="es-lname"/></div>
+      <div class="form-group"><label>Course</label>
+        <select id="es-course">
+          <option>BSIT</option><option>BSCS</option><option>ACT</option>
+        </select>
+      </div>
+      <div class="form-group"><label>Email</label><input id="es-email"/></div>
+      <div class="form-group"><label>Address</label><input id="es-address"/></div>
     </div>
     <div class="modal-footer">
       <button class="btn btn-secondary" onclick="closeModal('editStudentModal')">Cancel</button>
@@ -766,39 +731,12 @@ if (!isset($_SESSION['user_id'])) {
   </div>
 </div>
 
-<!-- ══ MODAL: SEARCH SITIN FORM ══ -->
-<div class="modal-overlay" id="searchSitInModal">
-  <div class="modal">
-    <div class="modal-head">
-      <h3>🔍 Search Student</h3>
-      <button class="modal-close" onclick="closeModal('searchSitInModal')">✕</button>
-    </div>
-    <div class="modal-body">
-      <div class="form-group">
-        <label>Search</label>
-        <input id="searchModalInput" placeholder="Search..." oninput="filterSearchModal()"/>
-      </div>
-      <div id="searchModalResults"></div>
-    </div>
-    <div class="modal-footer">
-      <button class="btn btn-secondary" onclick="closeModal('searchSitInModal')">Close</button>
-      <button class="btn btn-primary" onclick="filterSearchModal()">Search</button>
-    </div>
-  </div>
-</div>
-
+<!-- ══ SCRIPT ══ -->
 <script>
-// ── DATA ──
-let students = [
-  { id:'123',    name:'Kimmy K. Nengasca',        year:3, course:'BSIT', remaining:29 },
-  { id:'1234',   name:'rasil rasil. rasil',        year:1, course:'BSIT', remaining:30 },
-  { id:'2000',   name:'Jude Jefferson L. Sandalo', year:4, course:'BSIT', remaining:29 },
-  { id:'123123', name:'Jermaine J. Aguilar',       year:3, course:'BSIT', remaining:30 },
-  { id:'123456', name:'Jan v. Senador',             year:2, course:'BSIT', remaining:30 },
-  { id:'3677937',name:'Jeff Pelorina. Salimbangon', year:4, course:'BSIT', remaining:27 },
-];
+// ── Students data from PHP ──
+const studentsData = <?php echo json_encode($students_data); ?>;
 let sitinRecords = [];
-let editingId = null;
+let editingId = '';
 
 // ── NAV ──
 function showPage(name) {
@@ -806,13 +744,10 @@ function showPage(name) {
   document.querySelectorAll('.topnav-links a').forEach(a => a.classList.remove('active'));
   document.getElementById('page-' + name).classList.add('active');
   document.getElementById('nav-' + name).classList.add('active');
-  if(name==='students') renderStudentsTable();
-  if(name==='sitin') renderSitinTable();
-  if(name==='records') renderRecordsTable();
-  if(name==='reports') renderReportCharts();
+  if (name === 'reports') renderReportCharts();
 }
 
-// ── CHART: Home ──
+// ── HOME CHART ──
 window.addEventListener('load', () => {
   const ctx = document.getElementById('purposeChart').getContext('2d');
   new Chart(ctx, {
@@ -823,120 +758,81 @@ window.addEventListener('load', () => {
     },
     options: { plugins:{ legend:{ position:'top', labels:{ font:{ family:'Plus Jakarta Sans', size:11 }, boxWidth:12 } } }, animation:{ duration:800 } }
   });
-  renderStudentsTable();
 });
 
-// ── STUDENTS TABLE ──
-function renderStudentsTable() {
-  const q = (document.getElementById('studentsSearch')?.value||'').toLowerCase();
-  const filtered = students.filter(s => s.name.toLowerCase().includes(q) || s.id.includes(q));
-  const tbody = document.getElementById('studentsTbody');
-  if(!tbody) return;
-  tbody.innerHTML = filtered.length ? filtered.map(s => `
-    <tr>
-      <td class="td-mono">${s.id}</td>
-      <td><strong>${s.name}</strong></td>
-      <td>${s.year}</td>
-      <td><span class="badge badge-blue">${s.course}</span></td>
-      <td><span class="badge ${s.remaining<10?'badge-red':s.remaining<20?'badge-amber':'badge-green'}">${s.remaining}</span></td>
-      <td>
-        <div class="action-btns">
-          <button class="btn-sm btn-sm-blue" onclick="openEditStudent('${s.id}')">Edit</button>
-          <button class="btn-sm btn-sm-red"  onclick="deleteStudent('${s.id}')">Delete</button>
-        </div>
-      </td>
-    </tr>`).join('') : `<tr><td colspan="6" class="no-data">No students found</td></tr>`;
-  document.getElementById('studentsInfo').textContent = `Showing 1 to ${filtered.length} of ${filtered.length} entries`;
+// ── STUDENTS LIVE SEARCH ──
+function filterStudentsTable() {
+  const q = document.getElementById('studentsSearch').value.toLowerCase();
+  const rows = document.querySelectorAll('#studentsTbody tr');
+  let count = 0;
+  rows.forEach(row => {
+    const text = row.innerText.toLowerCase();
+    const show = text.includes(q);
+    row.style.display = show ? '' : 'none';
+    if (show) count++;
+  });
+  document.getElementById('studentsInfo').textContent = `Showing ${count} students`;
 }
 
-// ── ADD STUDENT ──
-function addStudent() {
-  const id = document.getElementById('as-id').value.trim();
-  const fname = document.getElementById('as-fname').value.trim();
-  const lname = document.getElementById('as-lname').value.trim();
-  const course = document.getElementById('as-course').value;
-  const year = parseInt(document.getElementById('as-year').value);
-  if(!id||!fname||!lname){ alert('Please fill all fields.'); return; }
-  students.push({ id, name: fname+' '+lname, year, course, remaining:30 });
-  closeModal('addStudentModal');
-  renderStudentsTable();
-}
-
-// ── EDIT STUDENT ──
-function openEditStudent(id) {
-  const s = students.find(x=>x.id===id);
-  if(!s) return;
-  editingId = id;
-  document.getElementById('es-id').value = s.id;
-  document.getElementById('es-name').value = s.name;
-  document.getElementById('es-course').value = s.course;
-  document.getElementById('es-year').value = s.year;
-  document.getElementById('es-remaining').value = s.remaining;
-  openModal('editStudentModal');
-}
-function saveEditStudent() {
-  const s = students.find(x=>x.id===editingId);
-  if(!s) return;
-  s.name = document.getElementById('es-name').value;
-  s.course = document.getElementById('es-course').value;
-  s.year = parseInt(document.getElementById('es-year').value);
-  s.remaining = parseInt(document.getElementById('es-remaining').value);
-  closeModal('editStudentModal');
-  renderStudentsTable();
-}
-function deleteStudent(id) {
-  if(!confirm('Delete this student?')) return;
-  students = students.filter(s=>s.id!==id);
-  renderStudentsTable();
-}
+// ── RESET SESSIONS ──
 function confirmResetSessions() {
-  if(!confirm('Reset all student sessions to 30?')) return;
-  students.forEach(s=>s.remaining=30);
-  renderStudentsTable();
+  if (!confirm('Reset all student sessions to 30?')) return;
+  fetch('/ccs_sitin/process/reset_sessions.php', { method: 'POST' })
+    .then(res => res.json())
+    .then(data => {
+      if (data.success) alert('Sessions reset successfully!');
+      else alert('Failed to reset sessions.');
+    });
 }
 
 // ── SIT-IN ──
 function openSitInForm() {
-  document.getElementById('si-id').value='';
-  document.getElementById('si-name').value='';
-  document.getElementById('si-remaining').value='';
+  document.getElementById('si-id').value = '';
+  document.getElementById('si-name').value = '';
+  document.getElementById('si-remaining').value = '';
   openModal('sitInModal');
 }
+
 function autoFillName() {
   const id = document.getElementById('si-id').value.trim();
-  const s = students.find(x=>x.id===id);
-  document.getElementById('si-name').value = s ? s.name : '';
-  document.getElementById('si-remaining').value = s ? s.remaining : '';
+  const s = studentsData.find(x => x.id_number === id);
+  document.getElementById('si-name').value = s ? s.first_name + ' ' + s.last_name : '';
+  document.getElementById('si-remaining').value = s ? (s.remaining_sessions ?? 30) : '';
 }
+
 function submitSitIn() {
-  const id = document.getElementById('si-id').value.trim();
-  const s = students.find(x=>x.id===id);
-  if(!s){ alert('Student not found.'); return; }
+  const id      = document.getElementById('si-id').value.trim();
   const purpose = document.getElementById('si-purpose').value;
-  const lab = document.getElementById('si-lab').value;
-  if(!purpose||!lab){ alert('Please select purpose and lab.'); return; }
-  if(s.remaining<=0){ alert('No remaining sessions!'); return; }
-  s.remaining--;
-  const rec = {
-    sitId: sitinRecords.length+1,
-    studentId: s.id, name: s.name,
-    purpose, lab, session: s.remaining,
-    status:'Active',
-    date: new Date().toLocaleDateString(),
-    timeIn: new Date().toLocaleTimeString(), timeOut:'—'
-  };
-  sitinRecords.push(rec);
-  closeModal('sitInModal');
-  renderSitinTable();
+  const lab     = document.getElementById('si-lab').value;
+  const s       = studentsData.find(x => x.id_number === id);
+
+  if (!s)            { alert('Student not found.'); return; }
+  if (!purpose||!lab){ alert('Please select purpose and lab.'); return; }
+
+  fetch('/ccs_sitin/process/sitin_process.php', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: `id_number=${id}&purpose=${purpose}&lab=${lab}`
+  })
+  .then(res => res.json())
+  .then(data => {
+    if (data.success) {
+      sitinRecords.push(data.record);
+      closeModal('sitInModal');
+      renderSitinTable();
+    } else {
+      alert(data.message || 'Failed to sit in.');
+    }
+  });
 }
+
 function renderSitinTable() {
-  const active = sitinRecords.filter(r=>r.status==='Active');
-  const tbody = document.getElementById('sitinTbody');
-  if(!tbody) return;
-  tbody.innerHTML = active.length ? active.map(r=>`
+  const active = sitinRecords.filter(r => r.status === 'Active');
+  const tbody  = document.getElementById('sitinTbody');
+  tbody.innerHTML = active.length ? active.map(r => `
     <tr>
-      <td class="td-mono">${r.sitId}</td>
-      <td class="td-mono">${r.studentId}</td>
+      <td class="td-mono">${r.sit_id}</td>
+      <td class="td-mono">${r.id_number}</td>
       <td><strong>${r.name}</strong></td>
       <td>${r.purpose}</td>
       <td>Lab ${r.lab}</td>
@@ -944,72 +840,117 @@ function renderSitinTable() {
       <td><span class="badge badge-amber">Active</span></td>
       <td>
         <div class="action-btns">
-          <button class="btn-sm btn-sm-teal" onclick="timeOut(${r.sitId})">Time Out</button>
+          <button class="btn-sm btn-sm-teal" onclick="timeOut(${r.sit_id})">Time Out</button>
         </div>
       </td>
-    </tr>`).join('') : `<tr><td colspan="8" class="no-data">No data available</td></tr>`;
-}
-function timeOut(sitId) {
-  const r = sitinRecords.find(x=>x.sitId===sitId);
-  if(r){ r.status='Done'; r.timeOut=new Date().toLocaleTimeString(); }
-  renderSitinTable();
-  renderRecordsTable();
+    </tr>`).join('') : `<tr><td colspan="8" class="no-data">No active sit-ins</td></tr>`;
+
+  document.getElementById('sitinInfo').textContent = `Showing ${active.length} entries`;
 }
 
-// ── RECORDS TABLE ──
+function timeOut(sitId) {
+  fetch('/ccs_sitin/process/timeout_process.php', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: `sit_id=${sitId}`
+  })
+  .then(res => res.json())
+  .then(data => {
+    if (data.success) {
+      const r = sitinRecords.find(x => x.sit_id === sitId);
+      if (r) { r.status = 'Done'; r.timeOut = new Date().toLocaleTimeString(); }
+      renderSitinTable();
+      renderRecordsTable();
+    }
+  });
+}
+
+// ── RECORDS ──
 function renderRecordsTable() {
   const tbody = document.getElementById('recordsTbody');
-  if(!tbody) return;
-  tbody.innerHTML = sitinRecords.length ? sitinRecords.map(r=>`
+  tbody.innerHTML = sitinRecords.length ? sitinRecords.map(r => `
     <tr>
-      <td class="td-mono">${r.sitId}</td>
-      <td class="td-mono">${r.studentId}</td>
+      <td class="td-mono">${r.sit_id}</td>
+      <td class="td-mono">${r.id_number}</td>
       <td>${r.name}</td>
       <td>${r.purpose}</td>
       <td>Lab ${r.lab}</td>
       <td>${r.session}</td>
       <td>${r.date}</td>
       <td>${r.timeIn}</td>
-      <td>${r.timeOut}</td>
-      <td><span class="badge ${r.status==='Done'?'badge-green':r.status==='Missed'?'badge-red':'badge-amber'}">${r.status}</span></td>
+      <td>${r.timeOut || '—'}</td>
+      <td><span class="badge ${r.status==='Done'?'badge-green':'badge-amber'}">${r.status}</span></td>
     </tr>`).join('') : `<tr><td colspan="10" class="no-data">No records available</td></tr>`;
 }
 
-// ── REPORT CHARTS ──
-let reportChartsInit = false;
-function renderReportCharts() {
-  if(reportChartsInit) return;
-  reportChartsInit = true;
-  new Chart(document.getElementById('reportBarChart'), {
-    type:'bar',
-    data:{
-      labels:['C Programming','Java','Web Dev','Database','ASP.Net','PHP','C#'],
-      datasets:[{ label:'Sessions', data:[4,3,2,3,2,3,1], backgroundColor:'#1a56db', borderRadius:6 }]
-    },
-    options:{ plugins:{legend:{display:false}}, scales:{y:{beginAtZero:true}}, animation:{duration:800} }
-  });
-  new Chart(document.getElementById('reportLineChart'), {
-    type:'line',
-    data:{
-      labels:['Lab 521','Lab 522','Lab 523','Lab 524','Lab 525','Lab 526'],
-      datasets:[{ label:'Sessions', data:[2,1,3,5,2,2], borderColor:'#0694a2', backgroundColor:'rgba(6,148,162,.12)', tension:.4, fill:true }]
-    },
-    options:{ plugins:{legend:{display:false}}, scales:{y:{beginAtZero:true}}, animation:{duration:800} }
+// ── EDIT STUDENT ──
+function openEditStudent(id) {
+  const s = studentsData.find(x => x.id_number === id);
+  if (!s) return;
+  editingId = id;
+  document.getElementById('es-id').value      = s.id_number;
+  document.getElementById('es-fname').value   = s.first_name;
+  document.getElementById('es-lname').value   = s.last_name;
+  document.getElementById('es-course').value  = s.course;
+  document.getElementById('es-email').value   = s.email;
+  document.getElementById('es-address').value = s.address;
+  openModal('editStudentModal');
+}
+
+function saveEditStudent() {
+  const id      = document.getElementById('es-id').value;
+  const fname   = document.getElementById('es-fname').value;
+  const lname   = document.getElementById('es-lname').value;
+  const course  = document.getElementById('es-course').value;
+  const email   = document.getElementById('es-email').value;
+  const address = document.getElementById('es-address').value;
+
+  fetch('/ccs_sitin/process/edit_student.php', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: `id_number=${id}&first_name=${fname}&last_name=${lname}&course=${course}&email=${email}&address=${address}`
+  })
+  .then(res => res.json())
+  .then(data => {
+    if (data.success) {
+      closeModal('editStudentModal');
+      location.reload();
+    } else {
+      alert('Failed to update student.');
+    }
   });
 }
 
 // ── SEARCH ──
 function filterSearchResults() {
-  const q = document.getElementById('searchStudentInput').value.toLowerCase();
+  const q   = document.getElementById('searchStudentInput').value.toLowerCase();
   const div = document.getElementById('searchResults');
-  if(!q){ div.innerHTML=''; return; }
-  const res = students.filter(s=>s.name.toLowerCase().includes(q)||s.id.includes(q));
+  if (!q) { div.innerHTML = ''; return; }
+  const res = studentsData.filter(s =>
+    (s.first_name + ' ' + s.last_name).toLowerCase().includes(q) ||
+    s.id_number.includes(q)
+  );
   div.innerHTML = res.length ?
     `<table style="width:100%;border-collapse:collapse;margin-top:4px">
-      <thead><tr><th style="padding:9px 12px;text-align:left;font-size:11px;color:var(--muted);border-bottom:1.5px solid var(--border)">ID</th><th style="padding:9px 12px;text-align:left;font-size:11px;color:var(--muted);border-bottom:1.5px solid var(--border)">Name</th><th style="padding:9px 12px;text-align:left;font-size:11px;color:var(--muted);border-bottom:1.5px solid var(--border)">Course</th><th style="padding:9px 12px;text-align:left;font-size:11px;color:var(--muted);border-bottom:1.5px solid var(--border)">Year</th><th style="padding:9px 12px;text-align:left;font-size:11px;color:var(--muted);border-bottom:1.5px solid var(--border)">Sessions</th><th style="padding:9px 12px;text-align:left;font-size:11px;color:var(--muted);border-bottom:1.5px solid var(--border)">Action</th></tr></thead>
-      <tbody>${res.map(s=>`<tr><td style="padding:11px 12px;font-family:'JetBrains Mono',monospace;font-size:12px;border-bottom:1px solid var(--border)">${s.id}</td><td style="padding:11px 12px;font-size:13px;border-bottom:1px solid var(--border)">${s.name}</td><td style="padding:11px 12px;font-size:13px;border-bottom:1px solid var(--border)">${s.course}</td><td style="padding:11px 12px;font-size:13px;border-bottom:1px solid var(--border)">${s.year}</td><td style="padding:11px 12px;font-size:13px;border-bottom:1px solid var(--border)">${s.remaining}</td><td style="padding:11px 12px;border-bottom:1px solid var(--border)"><button class="btn-sm btn-sm-blue" onclick="selectForSitIn('${s.id}')">Sit In</button></td></tr>`).join('')}</tbody>
+      <thead><tr>
+        <th style="padding:9px 12px;text-align:left;font-size:11px;color:var(--muted);border-bottom:1.5px solid var(--border)">ID</th>
+        <th style="padding:9px 12px;text-align:left;font-size:11px;color:var(--muted);border-bottom:1.5px solid var(--border)">Name</th>
+        <th style="padding:9px 12px;text-align:left;font-size:11px;color:var(--muted);border-bottom:1.5px solid var(--border)">Course</th>
+        <th style="padding:9px 12px;text-align:left;font-size:11px;color:var(--muted);border-bottom:1.5px solid var(--border)">Action</th>
+      </tr></thead>
+      <tbody>${res.map(s=>`
+        <tr>
+          <td style="padding:11px 12px;font-family:'JetBrains Mono',monospace;font-size:12px;border-bottom:1px solid var(--border)">${s.id_number}</td>
+          <td style="padding:11px 12px;font-size:13px;border-bottom:1px solid var(--border)">${s.first_name} ${s.last_name}</td>
+          <td style="padding:11px 12px;font-size:13px;border-bottom:1px solid var(--border)">${s.course}</td>
+          <td style="padding:11px 12px;border-bottom:1px solid var(--border)">
+            <button class="btn-sm btn-sm-blue" onclick="selectForSitIn('${s.id_number}')">Sit In</button>
+          </td>
+        </tr>`).join('')}
+      </tbody>
     </table>` : `<div style="color:var(--muted);font-size:13px;padding:12px 0">No students found.</div>`;
 }
+
 function selectForSitIn(id) {
   showPage('sitin');
   openSitInForm();
@@ -1020,21 +961,44 @@ function selectForSitIn(id) {
 // ── ANNOUNCEMENT ──
 function postAnnouncement() {
   const text = document.getElementById('announceText').value.trim();
-  if(!text) return;
-  const now = new Date();
-  const dateStr = now.toISOString().slice(0,10).replace(/-/g,'-').replace(/(\d{4})-(\d{2})-(\d{2})/,'$1-$2-$3');
-  const div = document.createElement('div');
+  if (!text) return;
+  const now     = new Date();
+  const dateStr = now.toISOString().slice(0, 10);
+  const div     = document.createElement('div');
   div.className = 'posted-item';
   div.innerHTML = `<div class="posted-meta">CCS Admin | ${dateStr}</div><div class="posted-text">${text}</div>`;
   document.getElementById('postedList').prepend(div);
-  document.getElementById('announceText').value='';
+  document.getElementById('announceText').value = '';
+}
+
+// ── REPORT CHARTS ──
+let reportChartsInit = false;
+function renderReportCharts() {
+  if (reportChartsInit) return;
+  reportChartsInit = true;
+  new Chart(document.getElementById('reportBarChart'), {
+    type: 'bar',
+    data: {
+      labels: ['C Programming','Java','Web Dev','Database','ASP.Net','PHP','C#'],
+      datasets: [{ label:'Sessions', data:[4,3,2,3,2,3,1], backgroundColor:'#1a56db', borderRadius:6 }]
+    },
+    options: { plugins:{legend:{display:false}}, scales:{y:{beginAtZero:true}}, animation:{duration:800} }
+  });
+  new Chart(document.getElementById('reportLineChart'), {
+    type: 'line',
+    data: {
+      labels: ['Lab 521','Lab 522','Lab 523','Lab 524','Lab 525','Lab 526'],
+      datasets: [{ label:'Sessions', data:[2,1,3,5,2,2], borderColor:'#0694a2', backgroundColor:'rgba(6,148,162,.12)', tension:.4, fill:true }]
+    },
+    options: { plugins:{legend:{display:false}}, scales:{y:{beginAtZero:true}}, animation:{duration:800} }
+  });
 }
 
 // ── MODALS ──
 function openModal(id)  { document.getElementById(id).classList.add('open'); }
 function closeModal(id) { document.getElementById(id).classList.remove('open'); }
 document.querySelectorAll('.modal-overlay').forEach(m => {
-  m.addEventListener('click', e => { if(e.target===m) m.classList.remove('open'); });
+  m.addEventListener('click', e => { if (e.target === m) m.classList.remove('open'); });
 });
 </script>
 </body>
