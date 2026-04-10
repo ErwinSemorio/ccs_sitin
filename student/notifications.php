@@ -5,20 +5,15 @@ if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'student') {
     exit();
 }
 include __DIR__ . "/../config/database.php";
-$id = $_SESSION['user_id'];
-$stmt = mysqli_prepare($conn, "SELECT id, purpose, lab, status, date, time_in, time_out FROM sitin_records WHERE id_number = ? ORDER BY date DESC, time_in DESC");
-mysqli_stmt_bind_param($stmt, 's', $id);
-mysqli_stmt_execute($stmt);
-$result = mysqli_stmt_get_result($stmt);
-$history = mysqli_fetch_all($result, MYSQLI_ASSOC);
-$active_page = 'history';
+$announcements = mysqli_query($conn, "SELECT * FROM announcements ORDER BY date DESC");
+$active_page = 'notifications';
 ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>History | CCS Sit-In</title>
+    <title>Notifications | CCS Sit-In</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
@@ -31,12 +26,11 @@ $active_page = 'history';
         .btn-logout { background: #ffc107; color: #08347a; font-weight: 700; border: none; border-radius: 8px; padding: 0.4rem 1rem; }
         .custom-card { background: var(--card-bg); border-radius: var(--radius-lg); box-shadow: var(--shadow-md); border: 1px solid var(--border-color); height: 100%; overflow: hidden; }
         .card-header-custom { padding: 1.25rem; font-weight: 700; font-size: 1.1rem; border-bottom: 1px solid var(--border-color); display: flex; align-items: center; gap: 0.5rem; background: #eff6ff; color: var(--primary); }
-        .table-modern thead th { background: #f8fafc; color: var(--text-muted); font-weight: 700; text-transform: uppercase; font-size: 0.75rem; letter-spacing: 0.5px; vertical-align: middle; }
-        .table-modern tbody td { vertical-align: middle; font-size: 0.9rem; }
-        .table-modern tbody tr:hover { background-color: #f8fafc; }
-        .badge-status { padding: 4px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 600; }
-        .badge-active { background: #fef3c7; color: #92400e; }
-        .badge-done { background: #d1fae5; color: #065f46; }
+        .notif-item { padding: 1.25rem; border-bottom: 1px solid var(--border-color); transition: background 0.2s; }
+        .notif-item:last-child { border-bottom: none; }
+        .notif-item:hover { background: #f8fafc; }
+        .notif-date { font-size: 0.75rem; color: var(--primary); font-weight: 700; margin-bottom: 0.25rem; }
+        .notif-msg { font-size: 0.95rem; line-height: 1.6; color: #374151; }
     </style>
 </head>
 <body>
@@ -57,41 +51,26 @@ $active_page = 'history';
     </nav>
 
     <div class="container py-4">
-        <div class="custom-card">
-            <div class="card-header-custom"><i class="bi bi-clock-history"></i> Your Sit-in History</div>
-            <div class="table-responsive">
-                <table class="table table-modern mb-0">
-                    <thead>
-                        <tr>
-                            <th>Date</th><th>Purpose</th><th>Lab</th><th>Time In</th><th>Time Out</th><th>Duration</th><th>Status</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php if (count($history) > 0): ?>
-                            <?php foreach ($history as $row): 
-                                $duration = 'N/A';
-                                if ($row['time_in'] && $row['time_out']) {
-                                    $diff = strtotime($row['time_out']) - strtotime($row['time_in']);
-                                    $hours = floor($diff / 3600);
-                                    $minutes = floor(($diff % 3600) / 60);
-                                    $duration = ($hours > 0 ? $hours . 'h ' : '') . $minutes . 'm';
-                                }
-                            ?>
-                            <tr>
-                                <td><?= htmlspecialchars(date('M d, Y', strtotime($row['date']))) ?></td>
-                                <td><?= htmlspecialchars($row['purpose']) ?></td>
-                                <td>Lab <?= htmlspecialchars($row['lab']) ?></td>
-                                <td><?= htmlspecialchars(date('h:i A', strtotime($row['time_in']))) ?></td>
-                                <td><?= $row['time_out'] ? htmlspecialchars(date('h:i A', strtotime($row['time_out']))) : '—' ?></td>
-                                <td><?= htmlspecialchars($duration) ?></td>
-                                <td><span class="badge-status <?= $row['status'] === 'Active' ? 'badge-active' : 'badge-done' ?>"><?= htmlspecialchars($row['status']) ?></span></td>
-                            </tr>
-                            <?php endforeach; ?>
+        <div class="row justify-content-center">
+            <div class="col-lg-8">
+                <div class="custom-card">
+                    <div class="card-header-custom"><i class="bi bi-bell-fill"></i> Latest Announcements</div>
+                    <div style="max-height: 70vh; overflow-y: auto;">
+                        <?php if($announcements && mysqli_num_rows($announcements) > 0): ?>
+                            <?php while($row = mysqli_fetch_assoc($announcements)): ?>
+                            <div class="notif-item">
+                                <div class="notif-date"><?= date('F d, Y', strtotime($row['date'])) ?></div>
+                                <div class="notif-msg"><?= nl2br(htmlspecialchars($row['message'])) ?></div>
+                            </div>
+                            <?php endwhile; ?>
                         <?php else: ?>
-                            <tr><td colspan="7" class="text-center py-4 text-muted">No sit-in records found.</td></tr>
+                            <div class="p-5 text-center text-muted">
+                                <i class="bi bi-inbox mb-3" style="font-size: 2.5rem; opacity: 0.3;"></i>
+                                <p class="mb-0">No announcements at this time.</p>
+                            </div>
                         <?php endif; ?>
-                    </tbody>
-                </table>
+                    </div>
+                </div>
             </div>
         </div>
     </div>

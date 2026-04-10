@@ -4,24 +4,13 @@ if (!isset($_SESSION['user_id'])) {
     header("Location: /ccs_sitin/login.php");
     exit();
 }
-include __DIR__ . "/../config/database.php";
-
-// ── Fetch records with error handling ──
-$sql = "SELECT * FROM sitin_records ORDER BY date DESC, time_in DESC";
-$result = mysqli_query($conn, $sql);
-
-if (!$result) {
-    die("Database Error: " . mysqli_error($conn));
-}
-
-$records = mysqli_fetch_all($result, MYSQLI_ASSOC);
 ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Sit-in Records | CCS Admin</title>
+<title>Reservation | CCS Admin</title>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
 <style>
@@ -51,16 +40,11 @@ body { font-family: 'Plus Jakarta Sans', sans-serif; background: var(--bg); colo
 .card-head { padding: 16px 20px; border-bottom: 1px solid var(--border); font-weight: 700; font-size: 15px; color: var(--navy); display: flex; justify-content: space-between; align-items: center; }
 .table-container { overflow-x: auto; }
 table { width: 100%; border-collapse: collapse; }
-th { text-align: left; padding: 12px 20px; font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--muted); background: #f8fafc; border-bottom: 1px solid var(--border); cursor: pointer; }
-th:hover { color: var(--blue); }
+th { text-align: left; padding: 12px 20px; font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--muted); background: #f8fafc; border-bottom: 1px solid var(--border); }
 td { padding: 14px 20px; font-size: 13px; border-bottom: 1px solid var(--border); vertical-align: middle; }
 tr:hover td { background: #fafbfc; }
-.badge { padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; }
-.badge-active { background: var(--amber-lt); color: var(--amber); }
-.badge-done { background: var(--green-lt); color: var(--green); }
 .search-bar { padding: 8px 14px; border: 1px solid var(--border); border-radius: 8px; width: 250px; font-family: inherit; outline: none; }
 .search-bar:focus { border-color: var(--blue); }
-.duration-badge { background: var(--blue-lt); color: var(--blue); padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; font-family: 'JetBrains Mono', monospace; }
 @keyframes fadeUp { from { opacity:0; transform:translateY(16px); } to { opacity:1; transform:none; } }
 @media (max-width: 1100px) {
     .nav-toggle { display: block; }
@@ -81,10 +65,10 @@ tr:hover td { background: #fafbfc; }
         <li><a href="search.php">Search</a></li>
         <li><a href="students.php">Students</a></li>
         <li><a href="sitin.php">Sit-in</a></li>
-        <li><a href="sitin_records.php" class="active">Sit-in Records</a></li>
+        <li><a href="sitin_records.php">Sit-in Records</a></li>
         <li><a href="reports.php">Reports</a></li>
         <li><a href="feedback.php">Feedback</a></li>
-        <li><a href="reservation.php">Reservation</a></li>
+        <li><a href="reservation.php" class="active">Reservation</a></li>
         <li><a href="leaderboard.php">Leaderboard</a></li>
         <li><a href="add_reward.php">Add Reward</a></li>
         <li><a href="/ccs_sitin/logout.php" class="logout-btn-nav">Log out</a></li>
@@ -92,62 +76,19 @@ tr:hover td { background: #fafbfc; }
 </nav>
 
 <div class="page">
-    <div class="section-heading">Sit-in Records</div>
+    <div class="section-heading">Reservations</div>
     <div class="card">
         <div class="card-head">
-            <span>📜 Sit-in History</span>
-            <input type="text" class="search-bar" id="searchInput" placeholder="Search records..." onkeyup="filterTable()">
+            <span>📅 Lab Reservations</span>
+            <input type="text" class="search-bar" placeholder="Search..." onkeyup="filterTable()">
         </div>
         <div class="table-container">
-            <table id="recordsTable">
+            <table>
                 <thead>
-                    <tr>
-                        <th onclick="sortTable(0)">ID Number ↕</th>
-                        <th onclick="sortTable(1)">Name ↕</th>
-                        <th onclick="sortTable(2)">Purpose ↕</th>
-                        <th onclick="sortTable(3)">Lab ↕</th>
-                        <th onclick="sortTable(4)">Date ↕</th>
-                        <th onclick="sortTable(5)">Time In ↕</th>
-                        <th onclick="sortTable(6)">Time Out ↕</th>
-                        <th onclick="sortTable(7)">Duration ↕</th>
-                        <th onclick="sortTable(8)">Status ↕</th>
-                    </tr>
+                    <tr><th>Reservation ID</th><th>ID Number</th><th>Name</th><th>Lab</th><th>Date</th><th>Time</th><th>Status</th><th>Actions</th></tr>
                 </thead>
                 <tbody>
-                    <?php if (count($records) > 0): ?>
-                        <?php foreach($records as $r): 
-                            // Calculate duration
-                            $duration = '—';
-                            $hours = 0;
-                            if ($r['time_in'] && $r['time_out']) {
-                                $timeIn = strtotime($r['time_in']);
-                                $timeOut = strtotime($r['time_out']);
-                                $diff = $timeOut - $timeIn;
-                                $h = floor($diff / 3600);
-                                $m = floor(($diff % 3600) / 60);
-                                $duration = ($h > 0 ? $h . 'h ' : '') . $m . 'm';
-                                $hours = round($diff / 3600, 2);
-                            }
-                        ?>
-                        <tr>
-                            <td style="font-family:'JetBrains Mono',monospace; font-size:12px;"><?php echo htmlspecialchars($r['id_number']); ?></td>
-                            <td><strong><?php echo htmlspecialchars($r['name']); ?></strong></td>
-                            <td><?php echo htmlspecialchars($r['purpose']); ?></td>
-                            <td>Lab <?php echo htmlspecialchars($r['lab']); ?></td>
-                            <td style="font-size:12px;"><?php echo htmlspecialchars($r['date']); ?></td>
-                            <td style="font-size:12px;"><?php echo htmlspecialchars($r['time_in']); ?></td>
-                            <td style="font-size:12px;"><?php echo $r['time_out'] ? htmlspecialchars($r['time_out']) : '—'; ?></td>
-                            <td>
-                                <span class="duration-badge" title="<?php echo $hours; ?> hours for weighted score">
-                                    <?php echo $duration; ?>
-                                </span>
-                            </td>
-                            <td><span class="badge <?php echo ($r['status'] === 'Active') ? 'badge-active' : 'badge-done'; ?>"><?php echo htmlspecialchars($r['status']); ?></span></td>
-                        </tr>
-                        <?php endforeach; ?>
-                    <?php else: ?>
-                        <tr><td colspan="9" style="text-align:center; padding:40px; color:var(--muted);">No sit-in records available</td></tr>
-                    <?php endif; ?>
+                    <tr><td colspan="8" style="text-align:center; padding:40px; color:var(--muted);">No reservations available</td></tr>
                 </tbody>
             </table>
         </div>
@@ -156,30 +97,11 @@ tr:hover td { background: #fafbfc; }
 
 <script>
 function toggleNav() { document.getElementById('topnavLinks').classList.toggle('show'); }
-
 function filterTable() {
-    const input = document.getElementById('searchInput').value.toLowerCase();
-    const rows = document.querySelectorAll('#recordsTable tbody tr');
-    rows.forEach(row => {
+    const input = document.querySelector('.search-bar').value.toLowerCase();
+    document.querySelectorAll('table tbody tr').forEach(row => {
         row.style.display = row.innerText.toLowerCase().includes(input) ? '' : 'none';
     });
-}
-
-// Simple table sorting
-function sortTable(columnIndex) {
-    const table = document.getElementById('recordsTable');
-    const tbody = table.querySelector('tbody');
-    const rows = Array.from(tbody.querySelectorAll('tr'));
-    const isAsc = table.dataset.sortAsc === 'true';
-    
-    rows.sort((a, b) => {
-        const aText = a.children[columnIndex].innerText.trim();
-        const bText = b.children[columnIndex].innerText.trim();
-        return isAsc ? aText.localeCompare(bText) : bText.localeCompare(aText);
-    });
-    
-    rows.forEach(row => tbody.appendChild(row));
-    table.dataset.sortAsc = (!isAsc).toString();
 }
 </script>
 </body>
