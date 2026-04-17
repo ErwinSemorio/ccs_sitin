@@ -1,0 +1,230 @@
+/* =========================================================
+   CCS Sit-In System - SPACE THEME Stylesheet
+   ========================================================= */
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+
+:root {
+  /* Space Colors */
+  --space-bg:      #05080f;
+  --space-deep:    #0a1128;
+  --space-surface: rgba(18, 24, 45, 0.6); /* Glass Transparency */
+  --space-border:  rgba(100, 120, 160, 0.2);
+  
+  /* Accents */
+  --accent-cyan:   #00d4ff;
+  --accent-purple: #7c3aed;
+  --accent-blue:   #3b82f6;
+  
+  /* Text */
+  --text-primary:  #e2e8f0;
+  --text-secondary:#94a3b8;
+  --text-muted:    #64748b;
+}
+
+/* ═══ RESET & BODY ═══ */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  /* Deep Space Background with Nebula Gradient */
+  background-color: var(--space-bg);
+  background-image: 
+    radial-gradient(circle at 15% 50%, rgba(59, 130, 246, 0.15) 0%, transparent 50%),
+    radial-gradient(circle at 85% 30%, rgba(124, 58, 237, 0.15) 0%, transparent 50%),
+    radial-gradient(circle at 50% 120%, rgba(0, 212, 255, 0.1) 0%, transparent 60%);
+  background-attachment: fixed;
+  color: var(--text-primary);
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow-x: hidden;
+  position: relative;
+}
+
+/* ✨ Animated Star Field */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image: 
+    radial-gradient(white 1px, transparent 1px),
+    radial-gradient(white 1px, transparent 1px);
+  background-size: 150px 150px, 80px 80px;
+  background-position: 0 0, 40px 60px;
+  opacity: 0.3;
+  pointer-events: none;
+  z-index: -1;
+  animation: twinkle 10s infinite linear;
+}
+
+@keyframes twinkle {
+  0% { transform: scale(1); opacity: 0.3; }
+  50% { opacity: 0.5; }
+  100% { transform: scale(1.05); opacity: 0.3; }
+}
+
+/* ═══ LOGIN CONTAINER (GLASSMORPHISM) ═══ */
+.login-container {
+  display: flex;
+  width: 90%;
+  max-width: 1000px;
+  min-height: 600px;
+  background: var(--space-surface);
+  backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--space-border);
+  border-radius: 24px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5), inset 0 0 0 1px rgba(255,255,255,0.05);
+  overflow: hidden;
+  animation: slideUp 0.8s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(40px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ═══ LEFT SIDE - FORM ═══ */
+.login-left {
+  flex: 1;
+  padding: 60px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  border-right: 1px solid rgba(255,255,255,0.05);
+}
+
+.login-content { max-width: 380px; }
+
+.login-header { margin-bottom: 40px; }
+.login-title {
+  font-size: 32px; font-weight: 800; color: #fff; margin-bottom: 8px;
+  text-shadow: 0 0 20px rgba(0, 212, 255, 0.3);
+}
+.login-subtitle { font-size: 15px; color: var(--text-secondary); }
+
+/* ═══ FORM ELEMENTS ═══ */
+.form-group { margin-bottom: 24px; }
+.form-label {
+  display: block; font-size: 13px; font-weight: 600;
+  color: var(--text-secondary); margin-bottom: 8px;
+  text-transform: uppercase; letter-spacing: 0.5px;
+}
+
+.form-control {
+  width: 100%; padding: 14px 16px; font-size: 15px; font-weight: 500;
+  color: #fff;
+  background: rgba(10, 15, 30, 0.6); 
+  border: 1px solid var(--space-border);
+  border-radius: 12px;
+  font-family: inherit; transition: all 0.3s ease;
+}
+
+.form-control::placeholder { color: var(--text-muted); }
+
+.form-control:focus {
+  outline: none; 
+  border-color: var(--accent-cyan);
+  box-shadow: 0 0 15px rgba(0, 212, 255, 0.2);
+  background: rgba(15, 20, 35, 0.8);
+}
+
+/* Password Toggle Button */
+.toggle-password {
+  background: none; border: none; color: var(--text-muted);
+  cursor: pointer; position: absolute; right: 15px; top: 50%; transform: translateY(-50%);
+}
+.toggle-password:hover { color: var(--accent-cyan); }
+.password-wrapper { position: relative; }
+
+/* ═══ BUTTONS ═══ */
+.btn-login {
+  width: 100%; padding: 16px; font-size: 16px; font-weight: 700;
+  color: #fff;
+  background: linear-gradient(135deg, var(--accent-blue) 0%, var(--accent-purple) 100%);
+  border: none; border-radius: 12px;
+  cursor: pointer; transition: all 0.3s ease;
+  margin-bottom: 24px;
+  box-shadow: 0 4px 15px rgba(59, 130, 246, 0.3);
+  position: relative;
+  overflow: hidden;
+}
+
+.btn-login:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 25px rgba(59, 130, 246, 0.5), 0 0 15px rgba(124, 58, 237, 0.4);
+}
+
+/* ═══ FOOTER ═══ */
+.login-footer { text-align: center; font-size: 14px; color: var(--text-muted); }
+.login-footer a {
+  color: var(--accent-cyan); text-decoration: none; font-weight: 600;
+  transition: all 0.3s;
+}
+.login-footer a:hover { text-shadow: 0 0 8px rgba(0, 212, 255, 0.6); }
+
+/* ═══ RIGHT SIDE - LOGO ═══ */
+.login-right {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+  position: relative;
+  /* Removed solid background, now transparent glass */
+  background: rgba(0, 0, 0, 0.2); 
+}
+
+.right-content { text-align: center; z-index: 1; }
+
+.logo-image {
+  width: 250px; height: auto;
+  margin-bottom: 30px;
+  /* Space Glow Animation */
+  filter: drop-shadow(0 0 20px rgba(0, 212, 255, 0.4));
+  animation: float 6s ease-in-out infinite;
+  mix-blend-mode: screen;
+  -webkit-mix-blend-mode: screen;
+  mix-blend-mode: screen;
+    filter: drop-shadow(0 0 20px rgba(124, 58, 237, 0.5)); /* Purple glow */
+ width: 250px; 
+    height: auto;
+    margin-bottom: 30px;
+    
+    /* Remove blend mode since image is now transparent */
+    mix-blend-mode: normal; 
+    
+    /* Add a double neon glow (Cyan and Purple) */
+    filter: drop-shadow(0 0 15px rgba(0, 212, 255, 0.8)) 
+            drop-shadow(0 0 30px rgba(124, 58, 237, 0.6));
+            
+    animation: float 6s ease-in-out infinite;
+
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-20px); }
+}
+
+.right-text h2 {
+  color: #fff; font-size: 28px; font-weight: 700; margin-bottom: 8px;
+  letter-spacing: -0.5px;
+}
+.right-text p { color: var(--accent-cyan); font-size: 16px; font-weight: 500; }
+
+/* ═══ ALERTS ═══ */
+.alert {
+  padding: 14px 18px; border-radius: 10px; margin-bottom: 24px;
+  font-size: 14px; font-weight: 600; display: flex; align-items: center; gap: 10px;
+  background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.3);
+  color: #fca5a5;
+}
+
+/* ═══ RESPONSIVE ═══ */
+@media (max-width: 900px) {
+  .login-container { flex-direction: column; max-width: 500px; margin: 20px; }
+  .login-left { padding: 40px 30px; border-right: none; }
+  .login-right { padding: 40px 30px; min-height: 300px; }
+  .logo-image { width: 150px; }
+}
