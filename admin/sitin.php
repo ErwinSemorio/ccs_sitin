@@ -64,12 +64,24 @@ $students = mysqli_fetch_all(mysqli_query($conn, "SELECT id_number, first_name, 
                 <a href="/ccs_sitin/admin/feedback.php" class="nav-link-space">Feedback</a>
                 <a href="/ccs_sitin/admin/reservation.php" class="nav-link-space">Reservation</a>
                 <a href="/ccs_sitin/admin/leaderboard.php" class="nav-link-space">Leaderboard</a>
+                <a href="/ccs_sitin/admin/add_reward.php" class="nav-link-space">Add Reward</a>
                 <a href="/ccs_sitin/logout.php" class="btn-space btn-space-danger" style="font-size:0.8rem; padding:0.4rem 0.8rem;">Log out</a>
             </div>
         </div>
     </nav>
 
     <div class="page-container">
+        <?php if (isset($_GET['success'])): ?>
+    <div class="alert-space alert-space-success" style="margin-bottom: 1.5rem;">
+        <i class="bi bi-check-circle-fill"></i> <?= htmlspecialchars($_GET['success']) ?>
+    </div>
+<?php endif; ?>
+
+<?php if (isset($_GET['error'])): ?>
+    <div class="alert-space alert-space-danger" style="margin-bottom: 1.5rem;">
+        <i class="bi bi-exclamation-triangle-fill"></i> <?= htmlspecialchars($_GET['error']) ?>
+    </div>
+<?php endif; ?>
         <div class="section-title">Active Sit-in Sessions</div>
         
         <div class="glass-card">

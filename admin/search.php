@@ -54,7 +54,7 @@ while($row = mysqli_fetch_assoc($students_query)) {
                 <li><a href="/ccs_sitin/admin/reservation.php" class="nav-link-space">Reservation</a></li>
                 <li><a href="/ccs_sitin/admin/leaderboard.php" class="nav-link-space">Leaderboard</a></li>
                 <li><a href="/ccs_sitin/admin/add_reward.php" class="nav-link-space">Add Reward</a></li>
-                <li><a href="/ccs_sitin/logout.php" class="nav-link-space logout-btn-nav">Log out</a></li>
+                <li><a href="/ccs_sitin/logout.php" class="btn-space btn-space-danger" style="font-size:0.8rem; padding:0.4rem 0.8rem;">Log out</a></li>
             </ul>
         </div>
     </nav>

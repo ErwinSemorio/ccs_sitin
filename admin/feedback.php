@@ -37,6 +37,7 @@ $feedback = mysqli_fetch_all(mysqli_query($conn, "SELECT * FROM sitin_records WH
                 <a href="/ccs_sitin/admin/feedback.php" class="nav-link-space active">Feedback</a>
                 <a href="/ccs_sitin/admin/reservation.php" class="nav-link-space">Reservation</a>
                 <a href="/ccs_sitin/admin/leaderboard.php" class="nav-link-space">Leaderboard</a>
+                <a href="/ccs_sitin/admin/add_reward.php" class="nav-link-space">Add Reward</a>
                 <a href="/ccs_sitin/logout.php" class="btn-space btn-space-danger" style="font-size:0.8rem; padding:0.4rem 0.8rem;">Log out</a>
             </div>
         </div>

@@ -15,7 +15,6 @@ $students = mysqli_fetch_all(mysqli_query($conn, "SELECT id_number, first_name, 
     <title>Add Reward | CCS Admin</title>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
-    <!-- Space Theme CSS -->
     <link rel="stylesheet" href="/ccs_sitin/space-theme.css">
     <style>
         .page-container { max-width: 1200px; margin: 0 auto; padding: 2rem; animation: fadeInSpace 0.5s ease-out; }
@@ -23,7 +22,6 @@ $students = mysqli_fetch_all(mysqli_query($conn, "SELECT id_number, first_name, 
         .section-title::before { content: ''; width: 4px; height: 24px; background: var(--accent-cyan); border-radius: 2px; }
         .form-grid { display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 1.5rem; }
         @media(max-width: 900px) { .form-grid { grid-template-columns: 1fr; } }
-        
         .student-item {
             display: flex; justify-content: space-between; align-items: center;
             padding: 1rem; border-bottom: 1px solid var(--space-border);
@@ -41,7 +39,6 @@ $students = mysqli_fetch_all(mysqli_query($conn, "SELECT id_number, first_name, 
     </style>
 </head>
 <body>
-    <!-- Space Theme Navbar -->
     <nav class="navbar-space">
         <div class="container" style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap;">
             <div class="navbar-brand-space"><i class="bi bi-shield-lock" style="color: var(--accent-cyan);"></i> CCS Admin</div>
@@ -63,7 +60,18 @@ $students = mysqli_fetch_all(mysqli_query($conn, "SELECT id_number, first_name, 
 
     <div class="page-container">
         <h2 class="section-title">⭐ Add Reward/Points</h2>
-        
+
+        <?php if (isset($_GET['success'])): ?>
+            <div class="alert-space alert-space-success" style="margin-bottom: 1.5rem;">
+                <i class="bi bi-check-circle-fill"></i> <?= htmlspecialchars($_GET['success']) ?>
+            </div>
+        <?php endif; ?>
+        <?php if (isset($_GET['error'])): ?>
+            <div class="alert-space alert-space-danger" style="margin-bottom: 1.5rem;">
+                <i class="bi bi-exclamation-triangle-fill"></i> <?= htmlspecialchars($_GET['error']) ?>
+            </div>
+        <?php endif; ?>
+
         <!-- Add Points Form -->
         <div class="glass-card fade-in-space">
             <div style="padding: 1.25rem; border-bottom: 1px solid var(--space-border);">
@@ -78,8 +86,8 @@ $students = mysqli_fetch_all(mysqli_query($conn, "SELECT id_number, first_name, 
                         <select name="id_number" required class="form-control-space">
                             <option value="">Choose a student...</option>
                             <?php foreach ($students as $s): ?>
-                                <option value="<?php echo $s['id_number']; ?>">
-                                    <?php echo htmlspecialchars($s['last_name'] . ', ' . $s['first_name']); ?> (<?php echo $s['points']; ?> pts)
+                                <option value="<?= $s['id_number'] ?>">
+                                    <?= htmlspecialchars($s['last_name'] . ', ' . $s['first_name']) ?> (<?= $s['points'] ?> pts)
                                 </option>
                             <?php endforeach; ?>
                         </select>
@@ -108,20 +116,24 @@ $students = mysqli_fetch_all(mysqli_query($conn, "SELECT id_number, first_name, 
         <div class="glass-card fade-in-space" style="animation-delay: 0.1s; margin-top: 1.5rem;">
             <div style="padding: 1.25rem; border-bottom: 1px solid var(--space-border); display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap;">
                 <h3 style="margin: 0; display: flex; align-items: center; gap: 0.75rem; font-size: 1.1rem;">
-                    <i class="bi bi-people" style="color: var(--accent-cyan);"></i> Student List
+                    <i class="bi bi-people" style="color: var(--accent-cyan);"></i> Student Points List
                 </h3>
                 <input type="text" id="searchStudents" class="form-control-space" placeholder="Search students..." style="width: 250px; margin-bottom: 0;" oninput="filterStudents()">
             </div>
             <div id="studentListContainer" style="max-height: 500px; overflow-y: auto;">
-                <?php foreach ($students as $s): ?>
-                <div class="student-item" data-name="<?php echo strtolower($s['first_name'] . ' ' . $s['last_name']); ?>">
-                    <div>
-                        <div class="student-name"><?php echo htmlspecialchars($s['first_name'] . ' ' . $s['last_name']); ?></div>
-                        <div class="student-meta"><?php echo htmlspecialchars($s['id_number']); ?> • <?php echo htmlspecialchars($s['course']); ?></div>
+                <?php if (count($students) > 0): ?>
+                    <?php foreach ($students as $s): ?>
+                    <div class="student-item" data-name="<?= strtolower($s['first_name'] . ' ' . $s['last_name']) ?>">
+                        <div>
+                            <div class="student-name"><?= htmlspecialchars($s['first_name'] . ' ' . $s['last_name']) ?></div>
+                            <div class="student-meta"><?= htmlspecialchars($s['id_number']) ?> • <?= htmlspecialchars($s['course']) ?></div>
+                        </div>
+                        <div class="points-badge"><i class="bi bi-star-fill"></i> <?= $s['points'] ?> pts</div>
                     </div>
-                    <div class="points-badge"><i class="bi bi-star-fill"></i> <?php echo $s['points']; ?> pts</div>
-                </div>
-                <?php endforeach; ?>
+                    <?php endforeach; ?>
+                <?php else: ?>
+                    <div style="padding: 2rem; text-align: center; color: var(--text-muted);">No students found.</div>
+                <?php endif; ?>
             </div>
         </div>
     </div>
