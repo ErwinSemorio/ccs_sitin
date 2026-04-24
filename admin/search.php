@@ -1,94 +1,128 @@
 <?php
 session_start();
-if (!isset($_SESSION['user_id'])) { header("Location: /ccs_sitin/login.php"); exit(); }
+if (!isset($_SESSION['user_id'])) {
+    header("Location: /ccs_sitin/login.php");
+    exit();
+}
 include __DIR__ . "/../config/database.php";
-$students = mysqli_fetch_all(mysqli_query($conn, "SELECT * FROM students ORDER BY last_name ASC"), MYSQLI_ASSOC);
+
+// Fetch all students for the search filter
+$students_query = mysqli_query($conn, "SELECT * FROM students ORDER BY last_name ASC");
+$students = [];
+while($row = mysqli_fetch_assoc($students_query)) {
+    $students[] = $row;
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Search | CCS Admin</title>
-<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
-<style>
-/* Copy the SAME CSS from sitin.php here */
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-:root { --navy: #0f2044; --blue: #1a56db; --blue-lt: #e8f0fe; --green: #057a55; --green-lt: #def7ec; --amber: #d97706; --amber-lt: #fef3c7; --red: #e02424; --gold: #f59e0b; --bg: #f1f5fb; --surface: #ffffff; --border: #e2e8f4; --text: #0f2044; --muted: #64748b; --shadow: 0 4px 20px rgba(15,32,68,.10); }
-body { font-family: 'Plus Jakarta Sans', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
-.topnav { position: sticky; top: 0; z-index: 100; background: var(--navy); display: flex; align-items: center; justify-content: space-between; padding: 0 28px; height: 58px; box-shadow: 0 2px 20px rgba(0,0,0,.25); }
-.topnav-brand { font-size: 15px; font-weight: 800; color: #fff; display: flex; align-items: center; gap: 10px; }
-.topnav-brand .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--gold); box-shadow: 0 0 8px var(--gold); }
-.topnav-links { display: flex; align-items: center; gap: 2px; list-style: none; }
-.topnav-links a { display: block; padding: 8px 13px; color: rgba(255,255,255,.7); text-decoration: none; font-size: 13px; font-weight: 600; border-radius: 8px; transition: all .18s; }
-.topnav-links a:hover, .topnav-links a.active { color: #fff; background: rgba(255,255,255,.12); }
-.logout-btn-nav { padding: 7px 16px !important; background: var(--gold) !important; color: var(--navy) !important; font-weight: 800 !important; border-radius: 8px !important; margin-left: 6px; }
-.page { padding: 28px 32px; max-width: 1000px; margin: 0 auto; animation: fadeUp .4s ease both; }
-.section-heading { font-size: 22px; font-weight: 800; color: var(--text); margin-bottom: 22px; display: flex; align-items: center; gap: 10px; }
-.section-heading::before { content: ''; width: 5px; height: 24px; background: var(--blue); border-radius: 3px; }
-.card { background: var(--surface); border: 1.5px solid var(--border); border-radius: 16px; box-shadow: var(--shadow); overflow: hidden; }
-.card-head { display: flex; align-items: center; gap: 9px; padding: 16px 20px; border-bottom: 1.5px solid var(--border); font-size: 14px; font-weight: 700; color: var(--navy); }
-.card-head .chip { width: 28px; height: 28px; border-radius: 8px; background: var(--blue-lt); color: var(--blue); display: flex; align-items: center; justify-content: center; font-size: 14px; }
-.search-input { padding: 7px 14px; border: 1.5px solid var(--border); border-radius: 9px; font-family: 'Plus Jakarta Sans', sans-serif; font-size: 13px; color: var(--text); background: var(--bg); outline: none; transition: border-color .18s; width: 100%; }
-.search-input:focus { border-color: var(--blue); }
-.result-item { padding: 14px; border: 1px solid var(--border); border-radius: 10px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; transition: all .2s; }
-.result-item:hover { border-color: var(--blue); background: var(--blue-lt); }
-.btn { padding: 9px 20px; border-radius: 9px; border: none; font-family: 'Plus Jakarta Sans', sans-serif; font-size: 13px; font-weight: 700; cursor: pointer; transition: all .18s; }
-.btn-primary { background: var(--blue); color: #fff; }
-.btn-primary:hover { background: #1347c0; transform: translateY(-1px); }
-@keyframes fadeUp { from { opacity:0; transform:translateY(16px); } to { opacity:1; transform:none; } }
-@media (max-width: 1100px) { .topnav-links { display: none; } .page { padding: 16px; } }
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Search | CCS Admin</title>
+    <!-- Fonts & Icons -->
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
+    <!-- Space Theme CSS -->
+    <link rel="stylesheet" href="/ccs_sitin/space-theme.css">
+    <style>
+        .result-item {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 1.25rem; border: 1px solid var(--space-border); border-radius: 12px;
+            margin-bottom: 12px; background: rgba(10, 15, 30, 0.4); transition: all 0.2s;
+        }
+        .result-item:hover { background: rgba(26, 86, 219, 0.15); border-color: var(--accent-blue); }
+        .result-name { color: var(--text-primary); font-weight: 700; font-size: 1.1rem; margin-bottom: 0.25rem; }
+        .result-info { color: var(--text-secondary); font-size: 0.9rem; }
+    </style>
 </head>
 <body>
-<nav class="topnav">
-    <div class="topnav-brand"><div class="dot"></div>College of Computer Studies Admin</div>
-    <ul class="topnav-links">
-        <li><a href="/ccs_sitin/admin/dashboard.php">Home</a></li>
-        <li><a href="/ccs_sitin/admin/search.php" class="active">Search</a></li>
-        <li><a href="/ccs_sitin/admin/students.php">Students</a></li>
-        <li><a href="/ccs_sitin/admin/sitin.php">Sit-in</a></li>
-        <li><a href="/ccs_sitin/admin/sitin_records.php">Sit-in Records</a></li>
-        <li><a href="/ccs_sitin/admin/reports.php">Reports</a></li>
-        <li><a href="/ccs_sitin/admin/feedback.php">Feedback</a></li>
-        <li><a href="/ccs_sitin/admin/reservation.php">Reservation</a></li>
-        <li><a href="/ccs_sitin/admin/leaderboard.php">Leaderboard</a></li>
-        <li><a href="/ccs_sitin/admin/add_reward.php">Add Reward</a></li>
-        <li><a href="/ccs_sitin/logout.php" class="logout-btn-nav">Log out</a></li>
-    </ul>
-</nav>
-
-<div class="page">
-    <div class="section-heading">Search Student</div>
-    <div class="card" style="max-width:600px">
-        <div class="card-head"><span class="chip">🔍</span> Find a Student</div>
-        <div class="card-body">
-            <div style="display:flex;gap:10px;">
-                <input type="text" class="search-input" id="searchInput" placeholder="Enter ID number or name..." oninput="filterResults()">
+    <!-- Space Theme Navbar -->
+    <nav class="navbar-space">
+        <div class="container">
+            <div class="navbar-brand-space">
+                <i class="bi bi-shield-lock" style="color: var(--accent-cyan);"></i>
+                CCS Admin Dashboard
             </div>
-            <div id="results" class="mt-3"></div>
+            <ul class="nav-links-space" style="list-style: none; margin: 0; padding: 0; display: flex; gap: 1.5rem; align-items: center;">
+                <li><a href="/ccs_sitin/admin/dashboard.php" class="nav-link-space">Home</a></li>
+                <li><a href="/ccs_sitin/admin/search.php" class="nav-link-space active">Search</a></li>
+                <li><a href="/ccs_sitin/admin/students.php" class="nav-link-space">Students</a></li>
+                <li><a href="/ccs_sitin/admin/sitin.php" class="nav-link-space">Sit-in</a></li>
+                <li><a href="/ccs_sitin/admin/sitin_records.php" class="nav-link-space">Sit-in Records</a></li>
+                <li><a href="/ccs_sitin/admin/reports.php" class="nav-link-space">Reports</a></li>
+                <li><a href="/ccs_sitin/admin/feedback.php" class="nav-link-space">Feedback</a></li>
+                <li><a href="/ccs_sitin/admin/reservation.php" class="nav-link-space">Reservation</a></li>
+                <li><a href="/ccs_sitin/admin/leaderboard.php" class="nav-link-space">Leaderboard</a></li>
+                <li><a href="/ccs_sitin/admin/add_reward.php" class="nav-link-space">Add Reward</a></li>
+                <li><a href="/ccs_sitin/logout.php" class="nav-link-space logout-btn-nav">Log out</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="page-container" style="max-width: 1000px; margin: 0 auto; padding: 2rem; animation: fadeInSpace 0.5s ease;">
+        <h2 style="color: var(--text-primary); margin-bottom: 1.5rem; display: flex; align-items: center; gap: 10px;">
+            <span style="width: 4px; height: 24px; background: var(--accent-cyan); border-radius: 2px;"></span>
+            Search Student
+        </h2>
+
+        <!-- Search Card -->
+        <div class="glass-card fade-in-space">
+            <div style="padding: 1.5rem; border-bottom: 1px solid var(--space-border);">
+                <h3 style="margin: 0; color: var(--text-primary); display: flex; align-items: center; gap: 0.5rem;">
+                    <i class="bi bi-search" style="color: var(--accent-blue);"></i> Find a Student
+                </h3>
+            </div>
+            <div style="padding: 1.5rem;">
+                <div style="display: flex; gap: 10px; margin-bottom: 1.5rem;">
+                    <input type="text" class="form-control-space" id="searchInput" placeholder="Enter ID number or name..." oninput="filterResults()" style="width: 100%; background: var(--space-deep); color: var(--text-primary);">
+                </div>
+                
+                <div id="results">
+                    <!-- Results will appear here -->
+                    <div style="text-align: center; padding: 3rem; color: var(--text-muted);">
+                        <i class="bi bi-search" style="font-size: 2.5rem; opacity: 0.5;"></i>
+                        <p class="mt-2">Type to search students...</p>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
-</div>
 
-<script>
-const students = <?php echo json_encode($students); ?>;
-function filterResults() {
-    const q = document.getElementById('searchInput').value.toLowerCase();
-    const div = document.getElementById('results');
-    if (!q) { div.innerHTML = ''; return; }
-    const res = students.filter(s => (s.first_name + ' ' + s.last_name).toLowerCase().includes(q) || s.id_number.includes(q));
-    div.innerHTML = res.length ? res.map(s => `
-        <div class="result-item">
-            <div class="result-info">
-                <h6>${s.first_name} ${s.last_name}</h6>
-                <small>${s.id_number} - ${s.course}</small>
-            </div>
-            <a href="sitin.php?id=${s.id_number}" class="btn btn-primary">Sit In</a>
-        </div>
-    `).join('') : '<p class="text-muted" style="text-align:center;padding:20px;">No students found.</p>';
-}
-</script>
+    <script>
+        // Pass PHP data to JS
+        const studentsData = <?php echo json_encode($students); ?>;
+
+        function filterResults() {
+            const q = document.getElementById('searchInput').value.toLowerCase();
+            const container = document.getElementById('results');
+            
+            if (!q) {
+                container.innerHTML = `<div style="text-align: center; padding: 3rem; color: var(--text-muted);"><i class="bi bi-search" style="font-size: 2.5rem; opacity: 0.5;"></i><p class="mt-2">Type to search students...</p></div>`;
+                return;
+            }
+
+            const res = studentsData.filter(s => 
+                (s.first_name + ' ' + s.last_name).toLowerCase().includes(q) || 
+                s.id_number.includes(q)
+            );
+
+            if (res.length === 0) {
+                container.innerHTML = `<div style="text-align: center; padding: 2rem; color: var(--text-muted);">No students found.</div>`;
+                return;
+            }
+
+            container.innerHTML = res.map(s => `
+                <div class="result-item fade-in-space">
+                    <div>
+                        <div class="result-name">${s.first_name} ${s.last_name}</div>
+                        <div class="result-info">${s.id_number} | ${s.course}</div>
+                    </div>
+                    <a href="sitin.php?id=${s.id_number}" class="btn-space btn-space-primary" style="padding: 0.5rem 1rem; font-size: 0.85rem;">
+                        <i class="bi bi-plus-lg"></i> Sit-In
+                    </a>
+                </div>
+            `).join('');
+        }
+    </script>
 </body>
 </html>

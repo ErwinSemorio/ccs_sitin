@@ -1,25 +1,24 @@
 <?php
-// Prevent session_start() errors
-if (session_status() === PHP_SESSION_NONE) {
-    session_start();
-}
-
+session_start();
 if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'student') {
     header("Location: /ccs_sitin/login.php");
     exit();
 }
-
 include __DIR__ . "/../config/database.php";
-
 $id = $_SESSION['user_id'];
-$result = mysqli_query($conn, "SELECT * FROM students WHERE id_number='$id'");
+
+// Fetch current student data
+$stmt = mysqli_prepare($conn, "SELECT * FROM students WHERE id_number = ?");
+mysqli_stmt_bind_param($stmt, 's', $id);
+mysqli_stmt_execute($stmt);
+$result = mysqli_stmt_get_result($stmt);
 $student = mysqli_fetch_assoc($result);
 
 $success_message = '';
 $error_message = '';
 
 // Handle form submission
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && !isset($_FILES['profile_photo'])) {
     $last_name = trim(mysqli_real_escape_string($conn, $_POST['last_name']));
     $first_name = trim(mysqli_real_escape_string($conn, $_POST['first_name']));
     $middle_name = trim(mysqli_real_escape_string($conn, $_POST['middle_name']));
@@ -27,17 +26,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $email = trim(mysqli_real_escape_string($conn, $_POST['email']));
     $course = trim(mysqli_real_escape_string($conn, $_POST['course']));
     $address = trim(mysqli_real_escape_string($conn, $_POST['address']));
-
-    $update_query = "UPDATE students SET 
-        last_name='$last_name',
-        first_name='$first_name',
-        middle_name='$middle_name',
-        year='$course_level',
-        email='$email',
-        course='$course',
-        address='$address'
-        WHERE id_number='$id'";
     
+    $update_query = "UPDATE students SET 
+        last_name='$last_name', 
+        first_name='$first_name', 
+        middle_name='$middle_name', 
+        year='$course_level', 
+        email='$email', 
+        course='$course', 
+        address='$address' 
+        WHERE id_number='$id'";
+        
     if (mysqli_query($conn, $update_query)) {
         $success_message = "Profile updated successfully!";
         $result = mysqli_query($conn, "SELECT * FROM students WHERE id_number='$id'");
@@ -46,6 +45,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $error_message = "Error updating profile: " . mysqli_error($conn);
     }
 }
+
+// Get profile photo
+$profile_photo = $student['profile_photo'] ?? 'default.jpg';
+$photo_path = "/ccs_sitin/uploads/profiles/" . $profile_photo;
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -53,229 +56,181 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Edit Profile | CCS Sit-In</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
+    <!-- Space Theme CSS -->
+    <link rel="stylesheet" href="/ccs_sitin/space-theme.css">
     <style>
-        :root {
-            --primary: #0d47a1;
-            --primary-dark: #08347a;
-            --bg-body: #f3f4f8;
-            --card-bg: #ffffff;
-            --text-main: #1f2937;
-            --text-muted: #6b7280;
-            --border-color: #e5e7eb;
-            --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.1);
-            --radius-lg: 16px;
+        .page-container { max-width: 800px; margin: 0 auto; padding: 2rem; }
+        .section-title { font-size: 1.5rem; margin-bottom: 1.5rem; color: #fff; display: flex; align-items: center; gap: 0.75rem; }
+        .section-title::before { content: ''; width: 4px; height: 24px; background: var(--accent-cyan); border-radius: 2px; }
+        
+        /* Photo Upload Area */
+        .photo-container {
+            text-align: center; margin-bottom: 2rem; padding: 2rem;
+            background: rgba(10, 15, 30, 0.4); border-radius: var(--radius);
+            border: 1px solid var(--space-border);
         }
-        body {
-            background-color: var(--bg-body);
-            font-family: 'Inter', sans-serif;
-            color: var(--text-main);
-            min-height: 100vh;
+        .photo-preview {
+            width: 150px; height: 150px; border-radius: 50%; object-fit: cover;
+            border: 4px solid var(--accent-cyan); margin-bottom: 1rem;
+            box-shadow: var(--shadow-glow);
         }
-        .navbar-custom {
-            background-color: var(--primary);
-            box-shadow: 0 4px 12px rgba(13,71,161,0.2);
-            padding: 0.8rem 0;
+        .photo-label {
+            display: inline-block; padding: 0.7rem 1.8rem; background: var(--accent-blue);
+            color: #fff; border-radius: var(--radius-sm); cursor: pointer; font-weight: 600;
+            transition: var(--transition);
         }
-        .navbar-brand {
-            color: white !important;
-            font-weight: 700;
-            font-size: 1.25rem;
-        }
-        .nav-link {
-            color: rgba(255,255,255,0.85) !important;
-            font-weight: 500;
-            font-size: 0.9rem;
-            padding: 0.5rem 1rem !important;
-            transition: all 0.2s;
-        }
-        .nav-link:hover, .nav-link.active {
-            color: white !important;
-            background: rgba(255,255,255,0.15);
-            border-radius: 8px;
-        }
-        .btn-logout {
-            background: #ffc107;
-            color: var(--primary-dark);
-            font-weight: 700;
-            border: none;
-            border-radius: 8px;
-            padding: 0.4rem 1rem;
-            transition: transform 0.2s;
-        }
-        .btn-logout:hover {
-            background: #ffca2c;
-            transform: translateY(-2px);
-        }
-        .custom-card {
-            background: var(--card-bg);
-            border-radius: var(--radius-lg);
-            box-shadow: var(--shadow-md);
-            border: 1px solid var(--border-color);
-            overflow: hidden;
-        }
-        .card-header-custom {
-            padding: 1.25rem;
-            font-weight: 700;
-            font-size: 1.1rem;
-            border-bottom: 1px solid var(--border-color);
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            background: #eff6ff;
-            color: var(--primary);
-        }
-        .form-label {
-            font-size: 0.85rem;
-            font-weight: 600;
-            color: var(--text-muted);
-            margin-bottom: 0.4rem;
-        }
-        .form-control, .form-select {
-            border-radius: 10px;
-            padding: 0.6rem 1rem;
-            border: 1px solid var(--border-color);
-        }
-        .form-control:focus, .form-select:focus {
-            border-color: var(--primary);
-            box-shadow: 0 0 0 3px rgba(13,71,161,0.1);
-        }
-        .form-control[readonly] {
-            background-color: #f8fafc;
-        }
-        .btn-save {
-            background: var(--primary);
-            color: white;
-            border-radius: 10px;
-            padding: 0.7rem 2rem;
-            font-weight: 600;
-            border: none;
-            transition: all 0.2s;
-        }
-        .btn-save:hover {
-            background: var(--primary-dark);
-            color: white;
-        }
-        .alert {
-            border-radius: 10px;
-            padding: 0.9rem 1.25rem;
-        }
-        .illustration {
-            text-align: center;
-            padding: 2rem;
-        }
-        .illustration svg {
-            max-width: 100%;
-            height: auto;
-        }
+        .photo-label:hover { background: var(--accent-purple); transform: translateY(-2px); }
+        #photoInput { display: none; }
+        .photo-hint { font-size: 0.8rem; color: var(--text-muted); margin-top: 0.5rem; }
+        
+        /* Form Grid */
+        .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+        @media(max-width: 700px) { .form-grid { grid-template-columns: 1fr; } }
     </style>
 </head>
 <body>
-    <!-- Single Navbar -->
-    <nav class="navbar navbar-expand-lg navbar-custom sticky-top">
-        <div class="container">
-            <a class="navbar-brand" href="#">🎓 CCS Sit-In</a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navContent">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <div class="collapse navbar-collapse" id="navContent">
-                <ul class="navbar-nav ms-auto align-items-center gap-1">
-                    <li class="nav-item"><a class="nav-link" href="dashboard.php"><i class="bi bi-house-door me-1"></i>Home</a></li>
-                    <li class="nav-item"><a class="nav-link" href="notifications.php"><i class="bi bi-bell me-1"></i>Notification</a></li>
-                    <li class="nav-item"><a class="nav-link active" href="edit_profile.php"><i class="bi bi-pencil-square me-1"></i>Edit Profile</a></li>
-                    <li class="nav-item"><a class="nav-link" href="history.php"><i class="bi bi-clock-history me-1"></i>History</a></li>
-                    <li class="nav-item"><a class="nav-link" href="reservation.php"><i class="bi bi-calendar-check me-1"></i>Reservation</a></li>
-                    <li class="nav-item ms-2"><a href="/ccs_sitin/logout.php" class="btn-logout btn">Log out</a></li>
-                </ul>
+    <!-- 🔹 Space Theme Navbar -->
+    <nav class="navbar-space">
+        <div class="container" style="display: flex; align-items: center; justify-content: space-between;">
+            <div class="navbar-brand-space">
+                <i class="bi bi-shield-lock" style="color: var(--accent-cyan);"></i>
+                CCS Sit-In System
+            </div>
+            <div class="nav-links-space">
+                <a href="dashboard.php" class="nav-link-space">Home</a>
+                <a href="notifications.php" class="nav-link-space">Notification</a>
+                <a href="edit_profile.php" class="nav-link-space active">Edit Profile</a>
+                <a href="history.php" class="nav-link-space">History</a>
+                <a href="reservation.php" class="nav-link-space">Reservation</a>
+                <a href="/ccs_sitin/logout.php" class="btn-space btn-space-danger" style="padding: 0.5rem 1rem; font-size: 0.85rem;">Log out</a>
             </div>
         </div>
     </nav>
 
-    <!-- Main Content -->
-    <div class="container py-5">
-        <div class="row justify-content-center">
-            <div class="col-lg-8">
-                <div class="custom-card">
-                    <div class="card-header-custom">
-                        <i class="bi bi-pencil-square"></i> Edit Profile
+    <div class="page-container">
+        <h2 class="section-title">✏️ Edit Profile</h2>
+        
+        <div class="glass-card fade-in-space">
+            <div style="padding: 1.5rem;">
+                <?php if($success_message): ?>
+                    <div class="alert-space alert-space-success"><i class="bi bi-check-circle-fill"></i> <?= $success_message ?></div>
+                <?php endif; ?>
+                <?php if($error_message): ?>
+                    <div class="alert-space alert-space-danger"><i class="bi bi-exclamation-triangle-fill"></i> <?= $error_message ?></div>
+                <?php endif; ?>
+
+                <!-- Profile Photo Upload -->
+                <div class="photo-container">
+                    <img src="<?= file_exists(__DIR__ . '/../uploads/profiles/' . $profile_photo) ? $photo_path : 'data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'150\' height=\'150\' viewBox=\'0 0 150 150\'%3E%3Crect fill=\'%231e293b\' width=\'150\' height=\'150\'/%3E%3Ccircle cx=\'75\' cy=\'60\' r=\'30\' fill=\'%2300d4ff\'/%3E%3Cpath d=\'M75 100 Q40 100 40 115 L40 125 L110 125 L110 115 Q110 100 75 100\' fill=\'%2300d4ff\'/%3E%3C/svg%3E' ?>" 
+                         alt="Profile" 
+                         class="photo-preview" 
+                         id="photoPreview">
+                    <div>
+                        <label for="photoInput" class="photo-label"><i class="bi bi-camera me-2"></i>Change Photo</label>
+                        <input type="file" id="photoInput" accept="image/*">
                     </div>
-                    <div class="p-4">
-                        <?php if($success_message): ?>
-                            <div class="alert alert-success">
-                                <i class="bi bi-check-circle-fill me-2"></i><?= $success_message ?>
-                            </div>
-                        <?php endif; ?>
-                        
-                        <?php if($error_message): ?>
-                            <div class="alert alert-danger">
-                                <i class="bi bi-exclamation-triangle-fill me-2"></i><?= $error_message ?>
-                            </div>
-                        <?php endif; ?>
-                        
-                        <form method="POST">
-                            <div class="row g-3">
-                                <div class="col-md-12">
-                                    <label class="form-label"><i class="bi bi-hash me-1"></i>ID Number</label>
-                                    <input type="text" class="form-control" value="<?= htmlspecialchars($student['id_number']) ?>" readonly>
-                                </div>
-                                
-                                <div class="col-md-4">
-                                    <label class="form-label"><i class="bi bi-person me-1"></i>First Name</label>
-                                    <input type="text" class="form-control" name="first_name" value="<?= htmlspecialchars($student['first_name']) ?>" required>
-                                </div>
-                                
-                                <div class="col-md-4">
-                                    <label class="form-label"><i class="bi bi-person me-1"></i>Last Name</label>
-                                    <input type="text" class="form-control" name="last_name" value="<?= htmlspecialchars($student['last_name']) ?>" required>
-                                </div>
-                                
-                                <div class="col-md-4">
-                                    <label class="form-label"><i class="bi bi-person me-1"></i>Middle Name</label>
-                                    <input type="text" class="form-control" name="middle_name" value="<?= htmlspecialchars($student['middle_name'] ?? '') ?>">
-                                </div>
-                                
-                                <div class="col-md-6">
-                                    <label class="form-label"><i class="bi bi-mortarboard me-1"></i>Course</label>
-                                    <input type="text" class="form-control" name="course" value="<?= htmlspecialchars($student['course']) ?>" required>
-                                </div>
-                                
-                                <div class="col-md-6">
-                                    <label class="form-label"><i class="bi bi-book me-1"></i>Year Level</label>
-                                    <select class="form-select" name="course_level" required>
-                                        <option value="">Select Year Level</option>
-                                        <option value="1" <?= (isset($student['year']) && $student['year'] == '1') ? 'selected' : '' ?>>1st Year</option>
-                                        <option value="2" <?= (isset($student['year']) && $student['year'] == '2') ? 'selected' : '' ?>>2nd Year</option>
-                                        <option value="3" <?= (isset($student['year']) && $student['year'] == '3') ? 'selected' : '' ?>>3rd Year</option>
-                                        <option value="4" <?= (isset($student['year']) && $student['year'] == '4') ? 'selected' : '' ?>>4th Year</option>
-                                    </select>
-                                </div>
-                                
-                                <div class="col-md-12">
-                                    <label class="form-label"><i class="bi bi-envelope me-1"></i>Email</label>
-                                    <input type="email" class="form-control" name="email" value="<?= htmlspecialchars($student['email']) ?>" required>
-                                </div>
-                                
-                                <div class="col-md-12">
-                                    <label class="form-label"><i class="bi bi-geo-alt me-1"></i>Address</label>
-                                    <input type="text" class="form-control" name="address" value="<?= htmlspecialchars($student['address']) ?>" required>
-                                </div>
-                                
-                                <div class="col-12 text-end mt-4">
-                                    <button type="submit" class="btn btn-save">
-                                        <i class="bi bi-check-lg me-1"></i>Save Changes
-                                    </button>
-                                    <a href="dashboard.php" class="btn btn-secondary ms-2">Cancel</a>
-                                </div>
-                            </div>
-                        </form>
-                    </div>
+                    <p class="photo-hint"><i class="bi bi-info-circle me-1"></i> JPG, PNG or GIF (Max 5MB)</p>
+                    <div id="uploadStatus"></div>
                 </div>
+
+                <!-- Edit Form -->
+                <form method="POST">
+                    <div class="form-grid">
+                        <div class="form-group-space" style="grid-column: 1 / -1;">
+                            <label class="form-label-space"><i class="bi bi-hash me-1"></i>ID Number</label>
+                            <input type="text" class="form-control-space" value="<?= htmlspecialchars($student['id_number']) ?>" readonly style="opacity: 0.6; cursor: not-allowed;">
+                        </div>
+                        <div class="form-group-space">
+                            <label class="form-label-space"><i class="bi bi-person me-1"></i>First Name</label>
+                            <input type="text" class="form-control-space" name="first_name" value="<?= htmlspecialchars($student['first_name']) ?>" required>
+                        </div>
+                        <div class="form-group-space">
+                            <label class="form-label-space"><i class="bi bi-person me-1"></i>Last Name</label>
+                            <input type="text" class="form-control-space" name="last_name" value="<?= htmlspecialchars($student['last_name']) ?>" required>
+                        </div>
+                        <div class="form-group-space">
+                            <label class="form-label-space"><i class="bi bi-person me-1"></i>Middle Name</label>
+                            <input type="text" class="form-control-space" name="middle_name" value="<?= htmlspecialchars($student['middle_name'] ?? '') ?>">
+                        </div>
+                        <div class="form-group-space">
+                            <label class="form-label-space"><i class="bi bi-mortarboard me-1"></i>Course</label>
+                            <input type="text" class="form-control-space" name="course" value="<?= htmlspecialchars($student['course']) ?>" required>
+                        </div>
+                        <div class="form-group-space">
+                            <label class="form-label-space"><i class="bi bi-book me-1"></i>Year Level</label>
+                            <select class="form-control-space" name="course_level" required>
+                                <option value="">Select...</option>
+                                <option value="1" <?= ($student['year'] ?? '') == '1' ? 'selected' : '' ?>>1st Year</option>
+                                <option value="2" <?= ($student['year'] ?? '') == '2' ? 'selected' : '' ?>>2nd Year</option>
+                                <option value="3" <?= ($student['year'] ?? '') == '3' ? 'selected' : '' ?>>3rd Year</option>
+                                <option value="4" <?= ($student['year'] ?? '') == '4' ? 'selected' : '' ?>>4th Year</option>
+                            </select>
+                        </div>
+                        <div class="form-group-space" style="grid-column: 1 / -1;">
+                            <label class="form-label-space"><i class="bi bi-envelope me-1"></i>Email</label>
+                            <input type="email" class="form-control-space" name="email" value="<?= htmlspecialchars($student['email']) ?>" required>
+                        </div>
+                        <div class="form-group-space" style="grid-column: 1 / -1;">
+                            <label class="form-label-space"><i class="bi bi-geo-alt me-1"></i>Address</label>
+                            <input type="text" class="form-control-space" name="address" value="<?= htmlspecialchars($student['address']) ?>" required>
+                        </div>
+                    </div>
+                    
+                    <div style="display: flex; justify-content: flex-end; gap: 1rem; margin-top: 1.5rem;">
+                        <a href="dashboard.php" class="btn-space btn-space-secondary">Cancel</a>
+                        <button type="submit" class="btn-space btn-space-primary"><i class="bi bi-check-lg"></i> Save Changes</button>
+                    </div>
+                </form>
             </div>
         </div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // 🔹 Profile Photo Upload Logic
+        const photoInput = document.getElementById('photoInput');
+        const photoPreview = document.getElementById('photoPreview');
+        const uploadStatus = document.getElementById('uploadStatus');
+
+        photoInput.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            
+            if (!file.type.startsWith('image/')) {
+                uploadStatus.innerHTML = '<div class="alert-space alert-space-danger mt-3"><i class="bi bi-exclamation-triangle"></i> Invalid file type. Only images allowed.</div>';
+                return;
+            }
+            if (file.size > 5 * 1024 * 1024) {
+                uploadStatus.innerHTML = '<div class="alert-space alert-space-danger mt-3"><i class="bi bi-exclamation-triangle"></i> File too large. Max 5MB.</div>';
+                return;
+            }
+            
+            // Preview
+            const reader = new FileReader();
+            reader.onload = (ev) => photoPreview.src = ev.target.result;
+            reader.readAsDataURL(file);
+            
+            // Upload via AJAX
+            const formData = new FormData();
+            formData.append('profile_photo', file);
+            
+            uploadStatus.innerHTML = '<div class="alert-space alert-space-info mt-3"><i class="bi bi-hourglass-split"></i> Uploading...</div>';
+            
+            fetch('/ccs_sitin/process/add_profile.php', { method: 'POST', body: formData })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    uploadStatus.innerHTML = '<div class="alert-space alert-space-success mt-3"><i class="bi bi-check-circle"></i> ' + data.message + '</div>';
+                    setTimeout(() => location.reload(), 1500);
+                } else {
+                    uploadStatus.innerHTML = '<div class="alert-space alert-space-danger mt-3"><i class="bi bi-exclamation-triangle"></i> ' + data.message + '</div>';
+                }
+            })
+            .catch(() => {
+                uploadStatus.innerHTML = '<div class="alert-space alert-space-danger mt-3"><i class="bi bi-exclamation-triangle"></i> Upload failed.</div>';
+            });
+        });
+    </script>
 </body>
 </html>
